@@ -6,36 +6,7 @@ import Control.Monad.State
 data Pitch = Ball | Strike
   deriving (Show)
 
-data Base = Home | First | Second | Third deriving (Show, Eq, Enum)
-
-type Position = (Double, Double)
-
 type Game = State GameState
-
-basePositions :: [(Base, Position)]
-basePositions =
-  [ (Home, (0, 0)),
-    (First, (90, 0)), -- Assuming 90 feet between bases
-    (Second, (90, 90)),
-    (Third, (0, 90))
-  ]
-
-data Diamond = Diamond
-  { homePlate :: Position,
-    firstBase :: Position,
-    secondBase :: Position,
-    thirdBase :: Position
-  }
-  deriving (Show)
-
-defaultDiamond :: Diamond
-defaultDiamond =
-  Diamond
-    { homePlate = (0, 0),
-      firstBase = (90, 0),
-      secondBase = (90, 90),
-      thirdBase = (0, 90)
-    }
 
 data Player = Player
   { name :: String,
@@ -56,21 +27,25 @@ data GameState = GameState
     homeScore :: Int, -- Home team's score
     awayScore :: Int, -- Away team's score
     outs :: Int, -- Number of outs in the inning
-    bases :: BasesOccupied, -- Bases occupied
+    bases :: BasesState, -- Bases occupied
     currentBatter :: Maybe Player -- Current batter (if any)
   }
   deriving (Show)
 
-data BasesOccupied = BasesOccupied
-  { firstOccupied :: Bool,
-    secondOccupied :: Bool,
-    thirdOccupied :: Bool
+-- data BaseState = Maybe Player deriving (Show)
+-- I had trouble with this type alias. Was it worth it?
+
+-- TODO: Refactor so we can account for who is on base.
+data BasesState = BasesState
+  { first :: Maybe Player,
+    second :: Maybe Player,
+    third :: Maybe Player
   }
   deriving (Show)
 
 -- Example: all bases empty
-emptyBases :: BasesOccupied
-emptyBases = BasesOccupied False False False
+emptyBases :: BasesState
+emptyBases = BasesState Nothing Nothing Nothing
 
 -- Initial game state
 initialGameState :: GameState
@@ -90,14 +65,15 @@ addRun isHomeTeam = modify $ \gs ->
     then gs {homeScore = homeScore gs + 1}
     else gs {awayScore = awayScore gs + 1}
 
-advanceRunners :: Int -> Game ()
-advanceRunners n = modify $ \gs ->
+advanceRunners :: Game ()
+advanceRunners = modify $ \gs ->
   let b = bases gs
+      cb = currentBatter gs
       newBases =
-        BasesOccupied
-          { firstOccupied = n > 0 && not (secondOccupied b),
-            secondOccupied = firstOccupied b,
-            thirdOccupied = secondOccupied b
+        BasesState
+          { first = cb,
+            second = first b,
+            third = second b
           }
    in gs {bases = newBases}
 
@@ -111,11 +87,6 @@ nextInning = modify $ \gs ->
       outs = 0,
       bases = emptyBases
     }
-
-batterToFirst :: Game ()
-batterToFirst = do
-  advanceRunners 1
-  modify $ \gs -> gs {currentBatter = Nothing}
 
 checkOuts :: Game ()
 checkOuts = do
