@@ -1,6 +1,11 @@
 # Baseball Dice Game
 
-Simulated baseball dice game.
+https://milb.bamcontent.com/documents/8/5/8/313285858/BaseballDiceGame_LouisvilleBats.pdf
+Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/313285858/BaseballDiceGame_LouisvilleBats.pdf).
+
+NOT "Diceball".
+
+https://milb.bamcontent.com/documents/8/5/8/313285858/BaseballDiceGame_LouisvilleBats.pdf
 
 ## TODO
 - [ ] Use lenses for state changes.
@@ -9,3 +14,4 @@ Simulated baseball dice game.
 - [ ] The whole UI. I plan to do a HTMX web app.
   - [ ] Use `aeson` for marshalling data structures into JSON. For sending via a
     backend web API.
+- [ ] Simulation strategy for testing.

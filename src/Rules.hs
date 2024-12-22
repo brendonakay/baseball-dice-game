@@ -10,32 +10,31 @@ data StrikeAction
   | HitTriple
   | HomeRun
   | PopOut
-  | Strike
+  | CalledStrike
+  | NoAction
 
--- TODO: Maybe there's a smarter way to do this.
--- Or something better than Maybe.
-getStrikeAction :: Int -> Int -> Maybe StrikeAction
+getStrikeAction :: Int -> Int -> StrikeAction
 getStrikeAction a b =
   case (a, b) of
-    (1, 1) -> Just HitDouble
-    (1, 2) -> Just GroundOut
-    (1, 3) -> Just HitByPitch
-    (1, 4) -> Just HitSingle
-    (1, 5) -> Just GroundOut
-    (1, 6) -> Just Strike
-    (2, 2) -> Just HitDouble
-    (2, 3) -> Just PopOut
-    (2, 4) -> Just HitSingle
-    (2, 5) -> Just Strike
-    (2, 6) -> Just GroundOut
-    (3, 3) -> Just HitTriple
-    (3, 4) -> Just Strike
-    (3, 5) -> Just GroundOut
-    (3, 6) -> Just FlyOut
-    (4, 4) -> Just FieldingError
-    (4, 5) -> Just FlyOut
-    (4, 6) -> Just FlyOut
-    (5, 5) -> Just HitSingle
-    (5, 6) -> Just PopOut
-    (6, 6) -> Just HomeRun
-    (_, _) -> Nothing
+    (1, 1) -> HitDouble
+    (1, 2) -> GroundOut
+    (1, 3) -> HitByPitch
+    (1, 4) -> HitSingle
+    (1, 5) -> GroundOut
+    (1, 6) -> CalledStrike
+    (2, 2) -> HitDouble
+    (2, 3) -> PopOut
+    (2, 4) -> HitSingle
+    (2, 5) -> CalledStrike
+    (2, 6) -> GroundOut
+    (3, 3) -> HitTriple
+    (3, 4) -> CalledStrike
+    (3, 5) -> GroundOut
+    (3, 6) -> FlyOut
+    (4, 4) -> FieldingError
+    (4, 5) -> FlyOut
+    (4, 6) -> FlyOut
+    (5, 5) -> HitSingle
+    (5, 6) -> PopOut
+    (6, 6) -> HomeRun
+    (_, _) -> NoAction

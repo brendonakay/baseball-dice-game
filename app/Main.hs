@@ -1,30 +1,60 @@
 module Main where
 
 import Control.Monad.State
+import Dice
 import Game
+
+-- TODO: Start with a simulation of one legimate inning of the dice game.
 
 main :: IO ()
 main = do
+  -- Initialize teams
+  let homeTeam =
+        HomeTeam
+          [ Player {name = "A", number = 01},
+            Player {name = "B", number = 02},
+            Player {name = "C", number = 03},
+            Player {name = "D", number = 04},
+            Player {name = "E", number = 05},
+            Player {name = "F", number = 06},
+            Player {name = "G", number = 07},
+            Player {name = "H", number = 08},
+            Player {name = "I", number = 09}
+          ]
+  let awayTeam =
+        AwayTeam
+          [ Player {name = "A", number = 01},
+            Player {name = "B", number = 02},
+            Player {name = "C", number = 03},
+            Player {name = "D", number = 04},
+            Player {name = "E", number = 05},
+            Player {name = "F", number = 06},
+            Player {name = "G", number = 07},
+            Player {name = "H", number = 08},
+            Player {name = "I", number = 09}
+          ]
+
   let initialGS = initialGameState
   printGameState initialGS
-  let ((), finalState) = runState simulateInning initialGS
-  printGameState finalState
 
--- Stupid simple simulation for the sake of running an inning.
-simulateInning :: Game ()
-simulateInning = do
-  batterToFirst
-  addOut
-  checkOuts
-  batterToFirst
-  addRun True
-  addOut
-  checkOuts
+  -- First pitch
+  diceRoll <- rollDiceNTimes 3
+  let ((), nextState) =
+        runState
+          ( runPitch
+              (pitchBallOrStrike (head diceRoll))
+              (diceRoll !! 1)
+              (diceRoll !! 2)
+          )
+          initialGS
 
--- Simulate game of baseball dice game
-simulateGame :: Game ()
-simulateGame = do
+  printGameState nextState
 
--- Inning 1
--- First pitch
---  Repeat for 3 outs
+-- simulateInning :: GameState -> IO ()
+-- simulateInning g = do
+--   -- First pitchBallOrStrike
+--   printGameState g
+
+printGameState :: GameState -> IO ()
+printGameState gs =
+  print (show gs)
