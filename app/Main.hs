@@ -4,8 +4,6 @@ import Control.Monad.State
 import Dice
 import Game
 
--- TODO: Start with a simulation of one legimate inning of the dice game.
-
 main :: IO ()
 main = do
   -- Initialize teams
@@ -37,8 +35,13 @@ main = do
   let initialGS = initialGameState
   printGameState initialGS
 
-  -- First pitch
+  -- Simulate game
+  runAndPrintGame initialGS
+
+runAndPrintGame :: GameState -> IO ()
+runAndPrintGame gs = do
   diceRoll <- rollDiceNTimes 3
+  print $ "Dice roll: " ++ show diceRoll
   let ((), nextState) =
         runState
           ( runPitch
@@ -46,14 +49,13 @@ main = do
               (diceRoll !! 1)
               (diceRoll !! 2)
           )
-          initialGS
+          gs
 
   printGameState nextState
 
--- simulateInning :: GameState -> IO ()
--- simulateInning g = do
---   -- First pitchBallOrStrike
---   printGameState g
+  if inning nextState <= 9
+    then runAndPrintGame nextState
+    else print "Game over!"
 
 printGameState :: GameState -> IO ()
 printGameState gs =

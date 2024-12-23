@@ -36,6 +36,7 @@ data GameState = GameState
     awayScore :: Int, -- Away team's score
     outs :: Int, -- Number of outs in the inning
     balls :: Int, -- Number of balls in the inning
+    strikes :: Int, -- Number of strikes in the inning
     bases :: BasesState, -- Bases occupied
     currentBatter :: Maybe Player -- Current batter (if any)
   }
@@ -47,9 +48,6 @@ newtype HomeTeam = HomeTeam Team
 
 newtype AwayTeam = AwayTeam Team
 
--- data BaseState = Maybe Player deriving (Show)
--- I had trouble with this type alias. Was it worth it?
-
 -- TODO: Refactor so we can account for who is on base.
 data BasesState = BasesState
   { first :: Maybe Player,
@@ -59,7 +57,6 @@ data BasesState = BasesState
   }
   deriving (Show)
 
--- Example: all bases empty
 emptyBases :: BasesState
 emptyBases = BasesState Nothing Nothing Nothing Nothing
 
@@ -72,6 +69,7 @@ initialGameState =
       awayScore = 0,
       outs = 0,
       balls = 0,
+      strikes = 0,
       bases = emptyBases,
       currentBatter = Nothing
     }
@@ -96,12 +94,52 @@ advanceRunners = do
             }
      in gs {bases = newBases, currentBatter = Nothing}
   checkScore
+  clearStrikes
+  clearBalls
+
+runnerToFirst :: Game ()
+runnerToFirst = do
+  modify $ \gs ->
+    let b = bases gs
+        cb = currentBatter gs
+        newBases =
+          BasesState
+            { first = cb,
+              second = second b,
+              third = third b,
+              home = Nothing
+            }
+     in gs {bases = newBases, currentBatter = Nothing}
+  clearStrikes
+  clearBalls
+
+walkRunner :: Game ()
+walkRunner = do
+  gs <- get
+  case first (bases gs) of
+    Just Player {} -> advanceRunners
+    Nothing -> runnerToFirst
 
 addOut :: Game ()
-addOut = modify $ \gs -> gs {outs = outs gs + 1}
+addOut = do
+  modify $ \gs -> gs {outs = outs gs + 1}
+  checkOuts
 
 addBall :: Game ()
-addBall = modify $ \gs -> gs {balls = balls gs + 1}
+addBall = do
+  checkBalls
+  modify $ \gs -> gs {balls = balls gs + 1}
+
+addStrike :: Game ()
+addStrike = do
+  modify $ \gs -> gs {strikes = strikes gs + 1}
+  checkStrikes
+
+clearBalls :: Game ()
+clearBalls = modify $ \gs -> gs {balls = 0}
+
+clearStrikes :: Game ()
+clearStrikes = modify $ \gs -> gs {strikes = 0}
 
 batterUp :: Game ()
 batterUp =
@@ -119,14 +157,24 @@ nextInning = modify $ \gs ->
 checkOuts :: Game ()
 checkOuts = do
   gs <- get
-  when (outs gs >= 3) nextInning
+  when (outs gs == 3) nextInning
 
 checkScore :: Game ()
 checkScore = do
   gs <- get
+  let b = even (inning gs)
   when (isJust (home (bases gs))) $
-    modify $
-      \gs' -> gs' {homeScore = homeScore gs' + 1}
+    addRun b
+
+checkBalls :: Game ()
+checkBalls = do
+  gs <- get
+  when (balls gs == 4) walkRunner
+
+checkStrikes :: Game ()
+checkStrikes = do
+  gs <- get
+  when (strikes gs == 3) addOut
 
 runStrikeAction :: Int -> Int -> Game ()
 runStrikeAction a b = do
@@ -152,7 +200,7 @@ runPitch p a b = do
     Strike -> runStrikeAction a b
 
 runCalledStrike :: Game ()
-runCalledStrike = addOut
+runCalledStrike = addStrike
 
 -- Runners advance 1 base
 runFieldingError :: Game ()
@@ -165,7 +213,7 @@ runGroundOut :: Game ()
 runGroundOut = addOut -- TODO: Add doubleplay
 
 runHitByPitch :: Game ()
-runHitByPitch = advanceRunners
+runHitByPitch = walkRunner
 
 runHitDouble :: Game ()
 runHitDouble = do
