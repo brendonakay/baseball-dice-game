@@ -12,6 +12,7 @@ data StrikeAction
   | PopOut
   | CalledStrike
   | NoAction
+  deriving (Show)
 
 getStrikeAction :: Int -> Int -> StrikeAction
 getStrikeAction a b =
