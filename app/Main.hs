@@ -63,7 +63,7 @@ runGameTUI gs ht at = do
     then runGameTUI nextState ht at
     else do
       let pl = pitchLog gs
-      runGameTableTUI (pitchLogToString pl)
+      runGameTableTUI (reverse (pitchLogToString pl))
 
 runAndPrintGame :: GameState -> HomeTeam -> AwayTeam -> IO ()
 runAndPrintGame gs ht at = do

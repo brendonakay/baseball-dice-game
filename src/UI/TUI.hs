@@ -22,21 +22,15 @@ renderPitchLog plr =
     alignRight 2 $
       alignMiddle 2 $
         table
-          [ [renderTable pitchLogHeader],
-            [renderTable (pitchLogRows plr)]
+          [ [renderTable (pitchLogTable plr)]
           ]
 
-pitchLogRows :: [[String]] -> Table ()
-pitchLogRows plr =
+pitchLogTable :: [[String]] -> Table ()
+pitchLogTable plr =
   alignCenter 1 $
     table $
-      map (map (txt . pack)) plr
-
-pitchLogHeader :: Table ()
-pitchLogHeader =
-  alignCenter 1 $
-    table
-      [map (txt . pack) logFields]
+      map (txt . pack) logFields -- Header
+        : map (map (txt . pack)) plr -- Rows
 
 runGameTableTUI :: [[String]] -> IO ()
 runGameTableTUI pl = simpleMain (ui pl)
