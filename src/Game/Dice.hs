@@ -1,4 +1,4 @@
-module Dice
+module Game.Dice
   ( rollDiceNTimes,
   )
 where

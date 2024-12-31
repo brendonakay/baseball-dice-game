@@ -53,6 +53,7 @@ extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall
+                 -threaded
 
 executable baseball-dice-game
     -- Import common warning flags.
@@ -62,9 +63,9 @@ executable baseball-dice-game
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Dice
-                    , Game 
-                    , Rules
+    other-modules:    Game.Dice
+                    , Game.Logic 
+                    , UI.TUI
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -73,6 +74,8 @@ executable baseball-dice-game
     build-depends:    base ^>=4.18.2.1
                     , random
                     , mtl
+                    , brick
+                    , text
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

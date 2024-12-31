@@ -1,15 +1,25 @@
-module Game where
+{-# LANGUAGE OverloadedStrings #-}
 
--- TODO: Move this to its own folder and submodules. E.G. Logic for pure
--- functions, "State" for game effects? IDK. Maybe a better name for that.
+-- This module contains the primary game logic.
+-- Run functions, prefixed with "run", are used in Control.Monad.State
+-- runState functions.
+
+module Game.Logic
+  ( initialGameState,
+    logFields,
+    pitchBallOrStrike,
+    pitchLogToString,
+    runPitch,
+    AwayTeam,
+    GameState (..),
+    HomeTeam,
+    Player (..),
+  )
+where
 
 import Control.Monad (when)
 import Control.Monad.State
 import Data.Maybe (isJust)
-import Rules
-  ( StrikeAction (..),
-    getStrikeAction,
-  )
 
 data Pitch = Ball | Strike
   deriving (Show)
@@ -44,6 +54,24 @@ data Log = Log
   }
   deriving (Show)
 
+-- It was just easier to keep a static list.
+-- Maybe there's a better way to dynamically derive the list of field names
+-- for this record.
+logFields :: [String]
+logFields =
+  [ "Current Batter",
+    "Strike Action",
+    "Inning",
+    "Half Inning",
+    "Home Batting",
+    "Away Batting",
+    "Home Score",
+    "Away Score",
+    "Balls",
+    "Strikes",
+    "Bases"
+  ]
+
 type PitchLog = [Log]
 
 logPitchGameState :: StrikeAction -> Game ()
@@ -70,18 +98,18 @@ data HalfInning = Bottom | Top deriving (Show, Eq)
 -- TODO: Break homeScore and awayScore out to a generic Score type that is a
 -- record of runs, hits, and errors
 data GameState = GameState
-  { inning :: Int, -- Current inning
-    halfInning :: HalfInning, -- Top or Bottom of the inning
-    homeBatting :: Int, -- Batting order, simple mod 9
+  { inning :: Int, -- Current inning.
+    halfInning :: HalfInning, -- Top or Bottom of the inning.
+    homeBatting :: Int, -- Batting order, simple mod 9.
     awayBatting :: Int,
-    homeScore :: Int, -- Home team's score
-    awayScore :: Int, -- Away team's score
-    outs :: Int, -- Number of outs in the inning
-    balls :: Int, -- Number of balls in the inning
-    strikes :: Int, -- Number of strikes in the inning
-    bases :: BasesState, -- Bases occupied
-    currentBatter :: Maybe Player, -- Current batter (if any)
-    pitchLog :: PitchLog -- Log of pitch actions
+    homeScore :: Int, -- Home team's score.
+    awayScore :: Int, -- Away team's score.
+    outs :: Int, -- Number of outs in the inning.
+    balls :: Int, -- Number of balls in the inning.
+    strikes :: Int, -- Number of strikes in the inning.
+    bases :: BasesState, -- Bases occupied.
+    currentBatter :: Maybe Player, -- Current batter (if any).
+    pitchLog :: PitchLog -- Log of pitch actions.
   }
   deriving (Show)
 
@@ -91,7 +119,6 @@ type HomeTeam = Team
 
 type AwayTeam = Team
 
--- TODO: Refactor so we can account for who is on base.
 data BasesState = BasesState
   { first :: Maybe Player,
     second :: Maybe Player,
@@ -153,7 +180,7 @@ advanceRunners = do
               third = second b,
               home = third b
             }
-     in gs {bases = newBases, currentBatter = Nothing}
+     in gs {bases = newBases}
   checkScore
   clearStrikes
   clearBalls
@@ -295,15 +322,23 @@ runStrikeAction a b = do
       pure CalledStrike
     NoAction -> pure NoAction
 
-runPitch :: HomeTeam -> AwayTeam -> Pitch -> Int -> Int -> Game StrikeAction
+runPitch ::
+  HomeTeam ->
+  AwayTeam ->
+  Pitch -> -- Diceroll for the pitch.
+  Int -> -- Diceroll for a strike.
+  Int ->
+  Game StrikeAction
 runPitch ht at p a b = do
   batterUp ht at
   case p of
     Ball -> do
       addBall
+      -- NoAction will stand for a ball.
+      -- I should look into a better abstraction.
+      logPitchGameState NoAction
       pure NoAction
     Strike -> do
-      -- TODO: How do I compose these?
       s <- runStrikeAction a b
       logPitchGameState s
       pure s
@@ -348,3 +383,61 @@ runHomeRun = do
 
 runPopOut :: Game ()
 runPopOut = addOut
+
+data StrikeAction
+  = FieldingError
+  | FlyOut
+  | GroundOut
+  | HitByPitch
+  | HitDouble
+  | HitSingle
+  | HitTriple
+  | HomeRun
+  | PopOut
+  | CalledStrike
+  | NoAction
+  deriving (Show)
+
+getStrikeAction :: Int -> Int -> StrikeAction
+getStrikeAction a b =
+  case (a, b) of
+    (1, 1) -> HitDouble
+    (1, 2) -> GroundOut
+    (1, 3) -> HitByPitch
+    (1, 4) -> HitSingle
+    (1, 5) -> GroundOut
+    (1, 6) -> CalledStrike
+    (2, 2) -> HitDouble
+    (2, 3) -> PopOut
+    (2, 4) -> HitSingle
+    (2, 5) -> CalledStrike
+    (2, 6) -> GroundOut
+    (3, 3) -> HitTriple
+    (3, 4) -> CalledStrike
+    (3, 5) -> GroundOut
+    (3, 6) -> FlyOut
+    (4, 4) -> FieldingError
+    (4, 5) -> FlyOut
+    (4, 6) -> FlyOut
+    (5, 5) -> HitSingle
+    (5, 6) -> PopOut
+    (6, 6) -> HomeRun
+    (_, _) -> NoAction
+
+pitchLogToString :: [Log] -> [[String]]
+pitchLogToString = map pitchLogToStringList
+
+pitchLogToStringList :: Log -> [String]
+pitchLogToStringList (Log cb sa i hi hb ab hs as b s ba) =
+  [ show cb,
+    show sa,
+    show i,
+    show hi,
+    show hb,
+    show ab,
+    show hs,
+    show as,
+    show b,
+    show s,
+    show ba
+  ]

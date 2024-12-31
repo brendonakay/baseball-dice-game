@@ -1,8 +1,13 @@
 module Main where
 
+-- TODO:
+--  - Make the game stateful in the TUI version.
+--  - Add TUI graphics.
+
 import Control.Monad.State
-import Dice
-import Game
+import Game.Dice
+import Game.Logic
+import UI.TUI
 
 main :: IO ()
 main = do
@@ -30,11 +35,35 @@ main = do
           Player {name = "I", number = 09}
         ]
 
+  -- Play ball!
   let initialGS = initialGameState
-  printGameState initialGS
 
-  -- Simulate game
-  runAndPrintGame initialGS homeTeam awayTeam
+  -- Simulate text game
+  -- printGameState initialGS
+  -- runAndPrintGame initialGS homeTeam awayTeam
+
+  -- Run Game TUI version
+  runGameTUI initialGS homeTeam awayTeam
+
+runGameTUI :: GameState -> HomeTeam -> AwayTeam -> IO ()
+runGameTUI gs ht at = do
+  diceRoll <- rollDiceNTimes 3
+  let (_, nextState) =
+        runState
+          ( runPitch
+              ht
+              at
+              (pitchBallOrStrike (head diceRoll))
+              (diceRoll !! 1)
+              (diceRoll !! 2)
+          )
+          gs
+
+  if inning nextState <= 9
+    then runGameTUI nextState ht at
+    else do
+      let pl = pitchLog gs
+      runGameTableTUI (pitchLogToString pl)
 
 runAndPrintGame :: GameState -> HomeTeam -> AwayTeam -> IO ()
 runAndPrintGame gs ht at = do
