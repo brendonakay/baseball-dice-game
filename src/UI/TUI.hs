@@ -26,13 +26,11 @@ renderPitchLog plr =
             [renderTable (pitchLogRows plr)]
           ]
 
--- BUG: This seems to be returning a single list with one long element.
---  It makes it so the UI has just one row with the whole game log appended.
 pitchLogRows :: [[String]] -> Table ()
 pitchLogRows plr =
   alignCenter 1 $
-    table
-      [concatMap (map (txt . pack)) plr]
+    table $
+      map (map (txt . pack)) plr
 
 pitchLogHeader :: Table ()
 pitchLogHeader =
