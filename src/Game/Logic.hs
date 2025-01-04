@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- This module contains the primary game logic.
@@ -19,7 +21,9 @@ where
 
 import Control.Monad (when)
 import Control.Monad.State
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe (isJust)
+import GHC.Generics (Generic)
 
 data Pitch = Ball | Strike
   deriving (Show)
@@ -30,7 +34,7 @@ data Player = Player
   { name :: String,
     number :: Int
   }
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 pitchBallOrStrike :: Int -> Pitch
 pitchBallOrStrike n =
@@ -52,7 +56,7 @@ data Log = Log
     strikes_ :: Int,
     bases_ :: BasesState
   }
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 -- It was just easier to keep a static list.
 -- Maybe there's a better way to dynamically derive the list of field names
@@ -93,7 +97,10 @@ logPitchGameState s = do
           }
   modify $ \gs' -> gs' {pitchLog = log' : pitchLog gs}
 
-data HalfInning = Bottom | Top deriving (Show, Eq)
+data HalfInning
+  = Bottom
+  | Top
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- TODO: Break homeScore and awayScore out to a generic Score type that is a
 -- record of runs, hits, and errors
@@ -125,7 +132,7 @@ data BasesState = BasesState
     third :: Maybe Player,
     home :: Maybe Player
   }
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 emptyBases :: BasesState
 emptyBases = BasesState Nothing Nothing Nothing Nothing
@@ -396,7 +403,7 @@ data StrikeAction
   | PopOut
   | CalledStrike
   | NoAction
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 getStrikeAction :: Int -> Int -> StrikeAction
 getStrikeAction a b =
@@ -424,7 +431,7 @@ getStrikeAction a b =
     (6, 6) -> HomeRun
     (_, _) -> NoAction
 
-pitchLogToString :: [Log] -> [[String]]
+pitchLogToString :: PitchLog -> [[String]]
 pitchLogToString = map pitchLogToStringList
 
 pitchLogToStringList :: Log -> [String]

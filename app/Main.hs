@@ -5,6 +5,8 @@ module Main where
 --  - Add TUI graphics.
 
 import Control.Monad.State
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy.Char8 as B
 import Game.Dice
 import Game.Logic
 import UI.TUI
@@ -39,11 +41,11 @@ main = do
   let initialGS = initialGameState
 
   -- Simulate text game
-  -- printGameState initialGS
-  -- runAndPrintGame initialGS homeTeam awayTeam
+  printGameState initialGS
+  runAndPrintGame initialGS homeTeam awayTeam
 
-  -- Run Game TUI version
-  runGameTUI initialGS homeTeam awayTeam
+-- Run Game TUI version
+-- runGameTUI initialGS homeTeam awayTeam
 
 runGameTUI :: GameState -> HomeTeam -> AwayTeam -> IO ()
 runGameTUI gs ht at = do
@@ -91,7 +93,8 @@ runAndPrintGame gs ht at = do
       print "Game over!"
       print ""
       print ""
-      print $ "Game Log: " ++ show (pitchLog gs)
+      print "Game Log: "
+      B.putStrLn $ encode (pitchLog gs)
 
 printGameState :: GameState -> IO ()
 printGameState gs =

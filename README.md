@@ -4,15 +4,18 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ## TODO
 ### UI
-- [ ] Terminal UI (TUI) using [ `brick`
+- [x] Terminal UI (TUI) using [ `brick`
 ](https://github.com/jtdaugherty/brick/).
+  - I'm choosing to abandon this approach. `brick` is nice, but I'm wasting too
+    much time on a UI that I plan to throw away. For now, I think producing JSON
+    from the pitchlog and ingesting that into SQLite to inspect game data is the
+    move.
 - [ ] HTMX web app.
 
 ### Misc
 - [ ] Use lenses for game state operations.
-  - [ ] Use `aeson` for marshalling data structures into JSON. For sending via a
+- [ ] Use `aeson` for marshalling data structures into JSON. For sending via a
     backend web API.
-- [ ] Reformat `src/` layout. Modularize GameState operators.
 
 ## Product Roadmap
 My goal with this project is to make a "Diceball-like" game. Where it has some
@@ -23,9 +26,9 @@ Each player has stats, and those stats are used for each pitch / plate
 appearance.
 
 ## Architectural Roadmap
-- [ ] CLI game.
+- [x] CLI game.
 - [ ] HTMX Web App.
-- [ ] Cloud hosted. Lambdas used.
+- [ ] Cloud hosted.
 
 ## Misc Thoughts
 I think game engine for processing pitches should be:

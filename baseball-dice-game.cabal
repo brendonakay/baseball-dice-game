@@ -76,6 +76,9 @@ executable baseball-dice-game
                     , mtl
                     , brick
                     , text
+                    , vty
+                    , aeson
+                    , bytestring
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

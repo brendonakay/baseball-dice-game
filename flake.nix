@@ -22,6 +22,7 @@
         haskellPackages.ghcid
         haskellPackages.ormolu
         libz
+        jq
       ];
       LD_LIBRARY_PATH=with pkgs; "${freeglut}/lib";
     };
