@@ -14,6 +14,14 @@
         config.allowUnfree = true;
       };
     in pkgs.mkShell {
+      inputsFrom = [pkgs];
+      buildInputs = [
+        # Override SQLite to enable readline
+        (pkgs.sqlite.overrideAttrs (old: {
+          configureFlags = old.configureFlags or [] ++ [ "--enable-readline" ];
+          buildInputs = (old.buildInputs or []) ++ [ pkgs.readline ];
+        }))
+      ];
       packages = with pkgs; [
         ghc
         cabal-install
@@ -25,6 +33,7 @@
         jq
       ];
       LD_LIBRARY_PATH=with pkgs; "${freeglut}/lib";
+      SQLITE_FLAGS="--enable-readline";
     };
   };
 }

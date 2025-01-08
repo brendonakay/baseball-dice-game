@@ -94,7 +94,7 @@ runAndPrintGame gs ht at = do
       print ""
       print ""
       print "Game Log: "
-      B.putStrLn $ encode (pitchLog gs)
+      B.putStrLn $ encode $ reverse (pitchLog gs)
 
 printGameState :: GameState -> IO ()
 printGameState gs =
