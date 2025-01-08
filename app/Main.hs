@@ -38,7 +38,7 @@ main = do
         ]
 
   -- Play ball!
-  let initialGS = initialGameState
+  let (_, initialGS) = runState (initialGameState homeTeam awayTeam) newGameState
 
   -- Simulate text game
   printGameState initialGS

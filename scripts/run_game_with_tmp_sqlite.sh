@@ -14,6 +14,7 @@ sqlite3 ':memory:' -header -column -interactive -cmd "
       awayScore     INTEGER,
       balls         INTEGER,
       strikes       INTEGER,
+      outs          INTEGER,
       bases         JSON);
     INSERT INTO temp_json (
       currentBatter,
@@ -26,6 +27,7 @@ sqlite3 ':memory:' -header -column -interactive -cmd "
       awayScore,
       balls,
       strikes,
+      outs,
       bases) 
       SELECT  
           json_extract(value, '$.currentBatter_') AS currentBatter,
@@ -38,6 +40,7 @@ sqlite3 ':memory:' -header -column -interactive -cmd "
           json_extract(value, '$.awayScore_')     AS awayScore,
           json_extract(value, '$.balls_')         AS balls,
           json_extract(value, '$.strikes_')       AS strikes,
+          json_extract(value, '$.outs_')          AS outs,
           json_extract(value, '$.bases_')         AS bases
           FROM json_each(readfile('game.json'));
     SELECT * FROM temp_json;" |

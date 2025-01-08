@@ -9,6 +9,7 @@
 module Game.Logic
   ( initialGameState,
     logFields,
+    newGameState,
     pitchBallOrStrike,
     pitchLogToString,
     runPitch,
@@ -54,6 +55,7 @@ data Log = Log
     awayScore_ :: Int,
     balls_ :: Int,
     strikes_ :: Int,
+    outs_ :: Int,
     bases_ :: BasesState
   }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -93,6 +95,7 @@ logPitchGameState s = do
             awayScore_ = awayScore gs,
             balls_ = balls gs,
             strikes_ = strikes gs,
+            outs_ = outs gs,
             bases_ = bases gs
           }
   modify $ \gs' -> gs' {pitchLog = log' : pitchLog gs}
@@ -137,9 +140,8 @@ data BasesState = BasesState
 emptyBases :: BasesState
 emptyBases = BasesState Nothing Nothing Nothing Nothing
 
--- Initial game state
-initialGameState :: GameState
-initialGameState =
+newGameState :: GameState
+newGameState =
   GameState
     { inning = 1,
       halfInning = Top,
@@ -164,10 +166,16 @@ initialGameState =
               awayScore_ = 0,
               balls_ = 0,
               strikes_ = 0,
+              outs_ = 0,
               bases_ = emptyBases
             }
         ]
     }
+
+-- Initial game state
+initialGameState :: HomeTeam -> AwayTeam -> Game ()
+initialGameState ht at = do
+  batterUp ht at
 
 addRun :: HalfInning -> Game ()
 addRun hi = modify $ \gs ->
@@ -222,8 +230,8 @@ addOut = do
 
 addBall :: Game ()
 addBall = do
-  checkBalls
   modify $ \gs -> gs {balls = balls gs + 1}
+  checkBalls
 
 addStrike :: Game ()
 addStrike = do
@@ -293,40 +301,50 @@ checkStrikes = do
   gs <- get
   when (strikes gs == 3) addOut
 
-runStrikeAction :: Int -> Int -> Game StrikeAction
-runStrikeAction a b = do
+runStrikeAction :: HomeTeam -> AwayTeam -> Int -> Int -> Game StrikeAction
+runStrikeAction ht at a b = do
   let strikeAction = getStrikeAction a b
   case strikeAction of
     FieldingError -> do
       runFieldingError
+      batterUp ht at
       pure FieldingError
     FlyOut -> do
       runFlyOut
+      batterUp ht at
       pure FlyOut
     GroundOut -> do
       runGroundOut
+      batterUp ht at
       pure GroundOut
     HitByPitch -> do
       runHitByPitch
+      batterUp ht at
       pure HitByPitch
     HitDouble -> do
       runHitDouble
+      batterUp ht at
       pure HitDouble
     HitSingle -> do
       runHitSingle
+      batterUp ht at
       pure HitSingle
     HitTriple -> do
       runHitTriple
+      batterUp ht at
       pure HitTriple
     HomeRun -> do
       runHomeRun
+      batterUp ht at
       pure HomeRun
     PopOut -> do
       runPopOut
+      batterUp ht at
       pure PopOut
     CalledStrike -> do
       runCalledStrike
       pure CalledStrike
+    -- TODO: create runNoAction for processing balls
     NoAction -> pure NoAction
 
 runPitch ::
@@ -337,7 +355,6 @@ runPitch ::
   Int ->
   Game StrikeAction
 runPitch ht at p a b = do
-  batterUp ht at
   case p of
     Ball -> do
       addBall
@@ -346,7 +363,7 @@ runPitch ht at p a b = do
       logPitchGameState NoAction
       pure NoAction
     Strike -> do
-      s <- runStrikeAction a b
+      s <- runStrikeAction ht at a b
       logPitchGameState s
       pure s
 
@@ -355,7 +372,8 @@ runCalledStrike = addStrike
 
 -- Runners advance 1 base
 runFieldingError :: Game ()
-runFieldingError = advanceRunners
+runFieldingError = do
+  advanceRunners
 
 runFlyOut :: Game () -- TODO: Add sac fly
 runFlyOut = addOut
@@ -435,7 +453,7 @@ pitchLogToString :: PitchLog -> [[String]]
 pitchLogToString = map pitchLogToStringList
 
 pitchLogToStringList :: Log -> [String]
-pitchLogToStringList (Log cb sa i hi hb ab hs as b s ba) =
+pitchLogToStringList (Log cb sa i hi hb ab hs as b s o ba) =
   [ show cb,
     show sa,
     show i,
@@ -446,5 +464,6 @@ pitchLogToStringList (Log cb sa i hi hb ab hs as b s ba) =
     show as,
     show b,
     show s,
+    show o,
     show ba
   ]

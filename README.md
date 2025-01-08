@@ -14,7 +14,7 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ### Misc
 - [ ] Use lenses for game state operations.
-- [ ] Use `aeson` for marshalling data structures into JSON. For sending via a
+- [x] Use `aeson` for marshalling data structures into JSON. For sending via a
     backend web API.
 
 ## Product Roadmap
@@ -26,9 +26,9 @@ Each player has stats, and those stats are used for each pitch / plate
 appearance.
 
 ## Architectural Roadmap
-- [x] CLI game.
 - [ ] HTMX Web App.
 - [ ] Cloud hosted.
+- [x] CLI game.
 
 ## Misc Thoughts
 I think game engine for processing pitches should be:
