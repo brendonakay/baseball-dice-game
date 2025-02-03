@@ -2,7 +2,7 @@
 
 cabal run | sed '1,/^.*Game Log: /d' >game.json
 
-sqlite3 ':memory:' -header -column -interactive -cmd "
+sqlite3 ':memory:' -header -column -cmd "
     CREATE TABLE temp_json(
       currentBatter JSON,
       strikeAction  TEXT,
@@ -43,7 +43,7 @@ sqlite3 ':memory:' -header -column -interactive -cmd "
           json_extract(value, '$.outs_')          AS outs,
           json_extract(value, '$.bases_')         AS bases
           FROM json_each(readfile('game.json'));
-    SELECT * FROM temp_json;" |
+    SELECT homeScore, awayScore, inning, halfInning, currentBatter, balls, strikes, outs, strikeAction, awayBatting, homeBatting FROM temp_json;" |
 	less
 
 rm game.json

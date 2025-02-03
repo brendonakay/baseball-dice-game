@@ -1,9 +1,5 @@
 module Main where
 
--- TODO:
---  - Make the game stateful in the TUI version.
---  - Add TUI graphics.
-
 import Control.Monad.State
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -42,7 +38,7 @@ main = do
 
   -- Simulate text game
   printGameState initialGS
-  runAndPrintGame initialGS homeTeam awayTeam
+  runAndPrintGame initialGS
 
 -- Run Game TUI version
 -- runGameTUI initialGS homeTeam awayTeam
@@ -53,8 +49,6 @@ runGameTUI gs ht at = do
   let (_, nextState) =
         runState
           ( runPitch
-              ht
-              at
               (pitchBallOrStrike (head diceRoll))
               (diceRoll !! 1)
               (diceRoll !! 2)
@@ -67,15 +61,13 @@ runGameTUI gs ht at = do
       let pl = pitchLog gs
       runGameTableTUI (reverse (pitchLogToString pl))
 
-runAndPrintGame :: GameState -> HomeTeam -> AwayTeam -> IO ()
-runAndPrintGame gs ht at = do
+runAndPrintGame :: GameState -> IO ()
+runAndPrintGame gs = do
   diceRoll <- rollDiceNTimes 3
   print $ "Dice roll: " ++ show diceRoll
   let (strikeAction, nextState) =
         runState
           ( runPitch
-              ht
-              at
               (pitchBallOrStrike (head diceRoll))
               (diceRoll !! 1)
               (diceRoll !! 2)
@@ -86,7 +78,7 @@ runAndPrintGame gs ht at = do
   print strikeAction
 
   if inning nextState <= 9
-    then runAndPrintGame nextState ht at
+    then runAndPrintGame nextState
     else do
       print ""
       print ""

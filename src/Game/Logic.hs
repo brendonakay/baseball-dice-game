@@ -49,8 +49,8 @@ data Log = Log
     strikeAction_ :: StrikeAction,
     inning_ :: Int,
     halfInning_ :: HalfInning,
-    homeBatting_ :: Int,
-    awayBatting_ :: Int,
+    homeBatting_ :: [Player],
+    awayBatting_ :: [Player],
     homeScore_ :: Int,
     awayScore_ :: Int,
     balls_ :: Int,
@@ -110,8 +110,8 @@ data HalfInning
 data GameState = GameState
   { inning :: Int, -- Current inning.
     halfInning :: HalfInning, -- Top or Bottom of the inning.
-    homeBatting :: Int, -- Batting order, simple mod 9.
-    awayBatting :: Int,
+    homeBatting :: [Player],
+    awayBatting :: [Player],
     homeScore :: Int, -- Home team's score.
     awayScore :: Int, -- Away team's score.
     outs :: Int, -- Number of outs in the inning.
@@ -145,8 +145,8 @@ newGameState =
   GameState
     { inning = 1,
       halfInning = Top,
-      homeBatting = 0,
-      awayBatting = 0,
+      homeBatting = [],
+      awayBatting = [],
       homeScore = 0,
       awayScore = 0,
       outs = 0,
@@ -155,27 +155,19 @@ newGameState =
       bases = emptyBases,
       currentBatter = Nothing,
       pitchLog =
-        [ Log
-            { currentBatter_ = Nothing,
-              strikeAction_ = NoAction,
-              inning_ = 0,
-              halfInning_ = Top,
-              homeBatting_ = 0,
-              awayBatting_ = 0,
-              homeScore_ = 0,
-              awayScore_ = 0,
-              balls_ = 0,
-              strikes_ = 0,
-              outs_ = 0,
-              bases_ = emptyBases
-            }
-        ]
+        []
     }
 
--- Initial game state
+-- Initial game state. Set the batting order for both teams and bring the first
+-- player to the plate.
 initialGameState :: HomeTeam -> AwayTeam -> Game ()
 initialGameState ht at = do
-  batterUp ht at
+  modify $ \gs ->
+    gs
+      { homeBatting = ht,
+        awayBatting = at
+      }
+  batterUp
 
 addRun :: HalfInning -> Game ()
 addRun hi = modify $ \gs ->
@@ -220,8 +212,12 @@ walkRunner :: Game ()
 walkRunner = do
   gs <- get
   case first (bases gs) of
-    Just Player {} -> advanceRunners
-    Nothing -> runnerToFirst
+    Just _ -> do
+      advanceRunners
+      batterUp
+    Nothing -> do
+      runnerToFirst
+      batterUp
 
 addOut :: Game ()
 addOut = do
@@ -244,21 +240,44 @@ clearBalls = modify $ \gs -> gs {balls = 0}
 clearStrikes :: Game ()
 clearStrikes = modify $ \gs -> gs {strikes = 0}
 
-batterUp :: HomeTeam -> AwayTeam -> Game ()
-batterUp ht at = do
+batterUp :: Game ()
+batterUp = do
+  gs <- get
+  case halfInning gs of
+    Top -> do
+      modify $
+        \gs' ->
+          gs'
+            { currentBatter = Just (head (awayBatting gs))
+            }
+      cycleBattingOrder
+    Bottom -> do
+      modify $
+        \gs' ->
+          gs'
+            { currentBatter = Just (head (homeBatting gs))
+            }
+      cycleBattingOrder
+
+cycleBattingOrder :: Game ()
+cycleBattingOrder = do
   gs <- get
   case halfInning gs of
     Top -> modify $
       \gs' ->
         gs'
-          { currentBatter = Just (at !! awayBatting gs),
-            awayBatting = mod (awayBatting gs + 1) 9
+          { awayBatting =
+              [ awayBatting gs !! (i `mod` length (awayBatting gs))
+                | i <- [1 .. length (awayBatting gs)]
+              ]
           }
     Bottom -> modify $
       \gs' ->
         gs'
-          { currentBatter = Just (ht !! homeBatting gs),
-            homeBatting = mod (homeBatting gs + 1) 9
+          { homeBatting =
+              [ homeBatting gs !! (i `mod` length (homeBatting gs))
+                | i <- [1 .. length (homeBatting gs)]
+              ]
           }
 
 nextHalfInning :: Game ()
@@ -268,14 +287,18 @@ nextHalfInning = do
     Top -> modify $ \gs' ->
       gs'
         { outs = 0,
+          balls = 0,
           bases = emptyBases,
+          currentBatter = Nothing,
           halfInning = Bottom
         }
     Bottom -> modify $ \gs' ->
       gs'
         { inning = inning gs' + 1,
           outs = 0,
+          balls = 0,
           bases = emptyBases,
+          currentBatter = Nothing,
           halfInning = Top
         }
 
@@ -301,60 +324,48 @@ checkStrikes = do
   gs <- get
   when (strikes gs == 3) addOut
 
-runStrikeAction :: HomeTeam -> AwayTeam -> Int -> Int -> Game StrikeAction
-runStrikeAction ht at a b = do
+runStrikeAction :: Int -> Int -> Game StrikeAction
+runStrikeAction a b = do
   let strikeAction = getStrikeAction a b
   case strikeAction of
     FieldingError -> do
       runFieldingError
-      batterUp ht at
       pure FieldingError
     FlyOut -> do
       runFlyOut
-      batterUp ht at
       pure FlyOut
     GroundOut -> do
       runGroundOut
-      batterUp ht at
       pure GroundOut
     HitByPitch -> do
       runHitByPitch
-      batterUp ht at
       pure HitByPitch
     HitDouble -> do
       runHitDouble
-      batterUp ht at
       pure HitDouble
     HitSingle -> do
       runHitSingle
-      batterUp ht at
       pure HitSingle
     HitTriple -> do
       runHitTriple
-      batterUp ht at
       pure HitTriple
     HomeRun -> do
       runHomeRun
-      batterUp ht at
       pure HomeRun
     PopOut -> do
       runPopOut
-      batterUp ht at
       pure PopOut
     CalledStrike -> do
       runCalledStrike
       pure CalledStrike
-    -- TODO: create runNoAction for processing balls
     NoAction -> pure NoAction
 
 runPitch ::
-  HomeTeam ->
-  AwayTeam ->
   Pitch -> -- Diceroll for the pitch.
   Int -> -- Diceroll for a strike.
   Int ->
   Game StrikeAction
-runPitch ht at p a b = do
+runPitch p a b = do
   case p of
     Ball -> do
       addBall
@@ -363,7 +374,7 @@ runPitch ht at p a b = do
       logPitchGameState NoAction
       pure NoAction
     Strike -> do
-      s <- runStrikeAction ht at a b
+      s <- runStrikeAction a b
       logPitchGameState s
       pure s
 
@@ -374,12 +385,17 @@ runCalledStrike = addStrike
 runFieldingError :: Game ()
 runFieldingError = do
   advanceRunners
+  batterUp
 
 runFlyOut :: Game () -- TODO: Add sac fly
-runFlyOut = addOut
+runFlyOut = do
+  addOut
+  batterUp
 
 runGroundOut :: Game ()
-runGroundOut = addOut -- TODO: Add doubleplay
+runGroundOut = do
+  addOut -- TODO: Add doubleplay
+  batterUp
 
 runHitByPitch :: Game ()
 runHitByPitch = walkRunner
@@ -388,16 +404,19 @@ runHitDouble :: Game ()
 runHitDouble = do
   advanceRunners
   advanceRunners
+  batterUp
 
 runHitSingle :: Game ()
 runHitSingle = do
   advanceRunners
+  batterUp
 
 runHitTriple :: Game ()
 runHitTriple = do
   advanceRunners
   advanceRunners
   advanceRunners
+  batterUp
 
 runHomeRun :: Game ()
 runHomeRun = do
@@ -405,9 +424,12 @@ runHomeRun = do
   advanceRunners
   advanceRunners
   advanceRunners
+  batterUp
 
 runPopOut :: Game ()
-runPopOut = addOut
+runPopOut = do
+  addOut
+  batterUp
 
 data StrikeAction
   = FieldingError
