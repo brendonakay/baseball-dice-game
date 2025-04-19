@@ -66,6 +66,7 @@ executable baseball-dice-game
     other-modules:    Game.Dice
                     , Game.Logic 
                     , UI.TUI
+                    , UI.HTMX
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -79,6 +80,11 @@ executable baseball-dice-game
                     , vty
                     , aeson
                     , bytestring
+                    , transformers
+                    , blaze-html
+                    , blaze-markup
+                    , blaze-htmx
+                    , scotty
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

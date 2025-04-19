@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Control.Monad.State
@@ -5,7 +7,15 @@ import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Game.Dice
 import Game.Logic
+import Text.Blaze.Html.Renderer.Text (renderHtml)
+import UI.HTMX
 import UI.TUI
+import Web.Scotty as S
+
+-- main :: IO ()
+-- main = scotty 3000 $ do
+--   S.get "/" $ do
+--     html $ renderHtml generateHTMXPage
 
 main :: IO ()
 main = do
