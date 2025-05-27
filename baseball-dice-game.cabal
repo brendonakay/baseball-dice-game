@@ -67,6 +67,7 @@ executable baseball-dice-game
                     , Game.Logic 
                     , UI.TUI
                     , UI.HTMX
+                    , API.Routes
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -85,6 +86,11 @@ executable baseball-dice-game
                     , blaze-markup
                     , blaze-htmx
                     , scotty
+                    , servant-server
+                    , servant-blaze
+                    , http-types
+                    , warp
+                    , wai
 
     -- Directories containing source files.
     hs-source-dirs:   app, src

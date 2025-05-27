@@ -2,53 +2,56 @@
 
 module Main where
 
+import API.Routes as App
 import Control.Monad.State
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Game.Dice
 import Game.Logic
+import Network.Wai.Handler.Warp (run)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import UI.HTMX
 import UI.TUI
 import Web.Scotty as S
 
--- main :: IO ()
--- main = scotty 3000 $ do
---   S.get "/" $ do
---     html $ renderHtml generateHTMXPage
-
 main :: IO ()
 main = do
-  -- Initialize teams
-  let homeTeam =
-        [ Player {name = "A", number = 01},
-          Player {name = "B", number = 02},
-          Player {name = "C", number = 03},
-          Player {name = "D", number = 04},
-          Player {name = "E", number = 05},
-          Player {name = "F", number = 06},
-          Player {name = "G", number = 07},
-          Player {name = "H", number = 08},
-          Player {name = "I", number = 09}
-        ]
-  let awayTeam =
-        [ Player {name = "A", number = 01},
-          Player {name = "B", number = 02},
-          Player {name = "C", number = 03},
-          Player {name = "D", number = 04},
-          Player {name = "E", number = 05},
-          Player {name = "F", number = 06},
-          Player {name = "G", number = 07},
-          Player {name = "H", number = 08},
-          Player {name = "I", number = 09}
-        ]
+  let port = 8080
+  putStrLn $ "Running on port " ++ show port
+  run port App.app
 
-  -- Play ball!
-  let (_, initialGS) = runState (initialGameState homeTeam awayTeam) newGameState
-
-  -- Simulate text game
-  printGameState initialGS
-  runAndPrintGame initialGS
+-- main :: IO ()
+-- main = do
+--   -- Initialize teams
+--   let homeTeam =
+--         [ Player {name = "A", number = 01},
+--           Player {name = "B", number = 02},
+--           Player {name = "C", number = 03},
+--           Player {name = "D", number = 04},
+--           Player {name = "E", number = 05},
+--           Player {name = "F", number = 06},
+--           Player {name = "G", number = 07},
+--           Player {name = "H", number = 08},
+--           Player {name = "I", number = 09}
+--         ]
+--   let awayTeam =
+--         [ Player {name = "A", number = 01},
+--           Player {name = "B", number = 02},
+--           Player {name = "C", number = 03},
+--           Player {name = "D", number = 04},
+--           Player {name = "E", number = 05},
+--           Player {name = "F", number = 06},
+--           Player {name = "G", number = 07},
+--           Player {name = "H", number = 08},
+--           Player {name = "I", number = 09}
+--         ]
+--
+--   -- Play ball!
+--   let (_, initialGS) = runState (initialGameState homeTeam awayTeam) newGameState
+--
+--   -- Simulate text game
+--   printGameState initialGS
+--   runAndPrintGame initialGS
 
 -- Run Game TUI version
 -- runGameTUI initialGS homeTeam awayTeam
