@@ -3,21 +3,24 @@
 
 module API.Routes where
 
+import API.Handlers (getGameDataRow)
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
 import UI.HTMX (generateHTMXPage)
 
--- Define the API type
+-- API type definition
 type API =
+  -- /
   Get '[HTML] Html
+    -- /data
     :<|> "data" :> Get '[HTML] Html
 
 -- Implement the server handlers
 server :: Server API
 server =
   return generateHTMXPage
-    :<|> return generateHTMXPage
+    :<|> return getGameDataRow
 
 -- Create the application
 app :: Application

@@ -68,6 +68,7 @@ executable baseball-dice-game
                     , UI.TUI
                     , UI.HTMX
                     , API.Routes
+                    , API.Handlers
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

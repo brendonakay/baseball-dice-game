@@ -17,20 +17,20 @@ generateHTMXPage = docTypeHtml $ do
   H.body $ do
     H.h1 "Game Data"
     H.button
-      ! Htmx.hxGet "/fetch-game-data"
+      ! Htmx.hxGet "/data"
       ! Htmx.hxTarget "#game-data-table-body"
-      ! Htmx.hxSwap "innerHTML"
+      ! Htmx.hxSwap "beforeend"
       $ "Load Game Data"
     H.table ! A.style "border: 1px solid black;" $ do
       H.thead $ H.tr $ do
-        H.th "Home Score"
-        H.th "Away Score"
-        H.th "Inning"
-        H.th "Half Inning"
-        H.th "Current Batter"
-        H.th "Balls"
-        H.th "Strikes"
-        H.th "Outs"
+        H.th "Home Score" ! A.style "border: 1px solid black;"
+        H.th "Away Score" ! A.style "border: 1px solid black;"
+        H.th "Inning" ! A.style "border: 1px solid black;"
+        H.th "Half Inning" ! A.style "border: 1px solid black;"
+        H.th "Current Batter" ! A.style "border: 1px solid black;"
+        H.th "Balls" ! A.style "border: 1px solid black;"
+        H.th "Strikes" ! A.style "border: 1px solid black;"
+        H.th "Outs" ! A.style "border: 1px solid black;"
       H.tbody ! A.id "game-data-table-body" $ return ()
 
 -- This function can be used to render the HTML page
