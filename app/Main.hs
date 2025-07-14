@@ -2,12 +2,13 @@
 
 module Main where
 
-import API.Routes as App
+import qualified API.Routes as App
 import Control.Monad.State
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Game.Dice
 import Game.Logic
+import Game.State (initializeGameState)
 import Network.Wai.Handler.Warp (run)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import UI.HTMX
@@ -16,15 +17,17 @@ import Web.Scotty as S
 
 main :: IO ()
 main = do
-  -- Test the state transformer debugging
-  putStrLn "=== Testing State Transformer Debug Functionality ==="
-  _ <- runStateT testStateChange newGameState
-  putStrLn "=== End Test ==="
+  -- Initialize game state
+  putStrLn "=== Initializing Baseball Game ==="
+  gameRef <- initializeGameState
+  putStrLn "Game initialized with teams and ready to play!"
 
-  -- Web Server test
+  -- Start web server with game state
   let port = 8080
-  putStrLn $ "Running on port " ++ show port
-  run port App.app
+  putStrLn $ "Starting server on port " ++ show port
+  putStrLn "Visit http://localhost:8080 to view the game"
+  putStrLn "Each request to /data will advance the game by one pitch"
+  run port (App.app gameRef)
 
 -- main :: IO ()
 -- main = do

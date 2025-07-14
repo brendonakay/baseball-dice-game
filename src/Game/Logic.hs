@@ -18,6 +18,8 @@ module Game.Logic
     GameState (..),
     HomeTeam,
     Player (..),
+    StrikeAction (..),
+    HalfInning (..),
   )
 where
 

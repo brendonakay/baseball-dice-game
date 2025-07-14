@@ -1,15 +1,31 @@
 module API.Handlers where
 
+import Control.Monad.IO.Class (liftIO)
+import Game.Logic (GameState (..), HalfInning (..), Player (..))
+import Game.State (GameRef, advanceGameState, getCurrentGameState)
+import Servant
 import Text.Blaze.Html5 as H
 
-getGameDataRow :: Html
-getGameDataRow = H.tr $
-  do
-    H.td $ H.toHtml "0" -- Home Score
-    H.td $ H.toHtml "0" -- Away Score
-    H.td $ H.toHtml "0" -- Inning
-    H.td $ H.toHtml "0" -- Half Inning
-    H.td $ H.toHtml "0" -- Current Batter
-    H.td $ H.toHtml "0" -- Balls
-    H.td $ H.toHtml "0" -- Strikes
-    H.td $ H.toHtml "0" -- Outs
+-- Get current game state and render as HTML row
+getGameDataRow :: GameRef -> Handler Html
+getGameDataRow gameRef = do
+  gameState <- liftIO $ getCurrentGameState gameRef
+  return $ gameStateToHtml gameState
+
+-- Advance game and return new state as HTML row
+advanceGameDataRow :: GameRef -> Handler Html
+advanceGameDataRow gameRef = do
+  (_, newState) <- liftIO $ advanceGameState gameRef
+  return $ gameStateToHtml newState
+
+-- Convert GameState to HTML table row
+gameStateToHtml :: GameState -> Html
+gameStateToHtml gs = H.tr $ do
+  H.td $ H.toHtml $ show $ homeScore gs
+  H.td $ H.toHtml $ show $ awayScore gs
+  H.td $ H.toHtml $ show $ inning gs
+  H.td $ H.toHtml $ show $ halfInning gs
+  H.td $ H.toHtml $ maybe "None" (\player -> name player ++ " (#" ++ show (number player) ++ ")") $ currentBatter gs
+  H.td $ H.toHtml $ show $ balls gs
+  H.td $ H.toHtml $ show $ strikes gs
+  H.td $ H.toHtml $ show $ outs gs

@@ -3,7 +3,8 @@
 
 module API.Routes where
 
-import API.Handlers (getGameDataRow)
+import API.Handlers (advanceGameDataRow, getGameDataRow)
+import Game.State (GameRef)
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
@@ -13,15 +14,15 @@ import UI.HTMX (generateHTMXPage)
 type API =
   -- /
   Get '[HTML] Html
-    -- /data
+    -- /data (advances game state)
     :<|> "data" :> Get '[HTML] Html
 
 -- Implement the server handlers
-server :: Server API
-server =
+server :: GameRef -> Server API
+server gameRef =
   return generateHTMXPage
-    :<|> return getGameDataRow
+    :<|> advanceGameDataRow gameRef
 
--- Create the application
-app :: Application
-app = serve (Proxy :: Proxy API) server
+-- Create the application with game state
+app :: GameRef -> Application
+app gameRef = serve (Proxy :: Proxy API) (server gameRef)
