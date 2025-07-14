@@ -16,6 +16,12 @@ import Web.Scotty as S
 
 main :: IO ()
 main = do
+  -- Test the state transformer debugging
+  putStrLn "=== Testing State Transformer Debug Functionality ==="
+  _ <- runStateT testStateChange newGameState
+  putStrLn "=== End Test ==="
+
+  -- Web Server test
   let port = 8080
   putStrLn $ "Running on port " ++ show port
   run port App.app
@@ -59,14 +65,14 @@ main = do
 runGameTUI :: GameState -> HomeTeam -> AwayTeam -> IO ()
 runGameTUI gs ht at = do
   diceRoll <- rollDiceNTimes 3
-  let (_, nextState) =
-        runState
-          ( runPitch
-              (pitchBallOrStrike (head diceRoll))
-              (diceRoll !! 1)
-              (diceRoll !! 2)
-          )
-          gs
+  (_, nextState) <-
+    runStateT
+      ( runPitch
+          (pitchBallOrStrike (head diceRoll))
+          (diceRoll !! 1)
+          (diceRoll !! 2)
+      )
+      gs
 
   if inning nextState <= 9
     then runGameTUI nextState ht at
@@ -78,14 +84,14 @@ runAndPrintGame :: GameState -> IO ()
 runAndPrintGame gs = do
   diceRoll <- rollDiceNTimes 3
   print $ "Dice roll: " ++ show diceRoll
-  let (strikeAction, nextState) =
-        runState
-          ( runPitch
-              (pitchBallOrStrike (head diceRoll))
-              (diceRoll !! 1)
-              (diceRoll !! 2)
-          )
-          gs
+  (strikeAction, nextState) <-
+    runStateT
+      ( runPitch
+          (pitchBallOrStrike (head diceRoll))
+          (diceRoll !! 1)
+          (diceRoll !! 2)
+      )
+      gs
 
   printGameState nextState
   print strikeAction

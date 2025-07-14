@@ -13,6 +13,7 @@ module Game.Logic
     pitchBallOrStrike,
     pitchLogToString,
     runPitch,
+    testStateChange,
     AwayTeam,
     GameState (..),
     HomeTeam,
@@ -22,20 +23,37 @@ where
 
 import Control.Monad (when)
 import Control.Monad.State
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe (isJust)
 import GHC.Generics (Generic)
+import System.IO (hFlush, stdout)
 
 data Pitch = Ball | Strike
   deriving (Show)
 
-type Game = State GameState
+-- State Transformer for Game logic
+type Game = StateT GameState IO
+
+-- Helper function to create a debugging state transformer
+debugStateChange :: String -> Game a -> Game a
+debugStateChange description action = do
+  oldState <- get
+  result <- action
+  newState <- get
+  when (oldState /= newState) $ do
+    liftIO $ do
+      putStrLn $ "State Change: " ++ description
+      putStrLn $ "  Previous state: " ++ show oldState
+      putStrLn $ "  New state: " ++ show newState
+      hFlush stdout
+  return result
 
 data Player = Player
   { name :: String,
     number :: Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 pitchBallOrStrike :: Int -> Pitch
 pitchBallOrStrike n =
@@ -58,7 +76,7 @@ data Log = Log
     outs_ :: Int,
     bases_ :: BasesState
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- It was just easier to keep a static list.
 -- Maybe there's a better way to dynamically derive the list of field names
@@ -121,7 +139,7 @@ data GameState = GameState
     currentBatter :: Maybe Player, -- Current batter (if any).
     pitchLog :: PitchLog -- Log of pitch actions.
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 type Team = [Player]
 
@@ -135,7 +153,7 @@ data BasesState = BasesState
     third :: Maybe Player,
     home :: Maybe Player
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 emptyBases :: BasesState
 emptyBases = BasesState Nothing Nothing Nothing Nothing
@@ -230,7 +248,7 @@ addBall = do
   checkBalls
 
 addStrike :: Game ()
-addStrike = do
+addStrike = debugStateChange "Adding a strike" $ do
   modify $ \gs -> gs {strikes = strikes gs + 1}
   checkStrikes
 
@@ -443,7 +461,7 @@ data StrikeAction
   | PopOut
   | CalledStrike
   | NoAction
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 getStrikeAction :: Int -> Int -> StrikeAction
 getStrikeAction a b =
@@ -489,3 +507,11 @@ pitchLogToStringList (Log cb sa i hi hb ab hs as b s o ba) =
     show o,
     show ba
   ]
+
+-- Test function to demonstrate state change debugging
+testStateChange :: Game ()
+testStateChange = do
+  liftIO $ putStrLn "Testing state change debugging..."
+  addStrike
+  addStrike
+  liftIO $ putStrLn "Test completed!"
