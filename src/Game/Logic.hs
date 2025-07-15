@@ -20,12 +20,13 @@ module Game.Logic
     Player (..),
     StrikeAction (..),
     HalfInning (..),
+    BasesState (..),
   )
 where
 
 import Control.Monad (when)
-import Control.Monad.State
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe (isJust)
 import GHC.Generics (Generic)

@@ -10,7 +10,7 @@ where
 import Control.Monad.State (runStateT)
 import Data.IORef
 import Game.Dice (rollDiceNTimes)
-import Game.Logic (GameState(..), Player(..), StrikeAction, initialGameState, newGameState, pitchBallOrStrike, runPitch)
+import Game.Logic (GameState (..), Player (..), StrikeAction, initialGameState, newGameState, pitchBallOrStrike, runPitch)
 
 -- Thread-safe reference to game state
 type GameRef = IORef GameState
@@ -40,7 +40,7 @@ initializeGameState = do
           Player {name = "Away H", number = 8},
           Player {name = "Away I", number = 9}
         ]
-  
+
   -- Initialize game state with teams
   (_, initialState) <- runStateT (initialGameState homeTeam awayTeam) newGameState
   newIORef initialState
@@ -50,13 +50,14 @@ advanceGameState :: GameRef -> IO (StrikeAction, GameState)
 advanceGameState gameRef = do
   diceRoll <- rollDiceNTimes 3
   currentState <- readIORef gameRef
-  (strikeAction, newState) <- runStateT
-    ( runPitch
-        (pitchBallOrStrike (head diceRoll))
-        (diceRoll !! 1)
-        (diceRoll !! 2)
-    )
-    currentState
+  (strikeAction, newState) <-
+    runStateT
+      ( runPitch
+          (pitchBallOrStrike (head diceRoll))
+          (diceRoll !! 1)
+          (diceRoll !! 2)
+      )
+      currentState
   writeIORef gameRef newState
   return (strikeAction, newState)
 

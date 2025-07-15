@@ -23,7 +23,7 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 - [ ] Hot reloading.
 - [ ] Use lenses for game state operations.
-- [ ] Add the ability to print state changes for debugging.
+- [x] Add the ability to print state changes for debugging.
 - [x] Use `aeson` for marshalling data structures into JSON. For sending via a
       backend web API.
 
