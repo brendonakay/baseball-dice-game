@@ -2,7 +2,14 @@ module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (isJust)
-import Game.Logic (BasesState (..), GameState (..), HalfInning (..), Log (..), Player (..), StrikeAction (..))
+import Game.Logic
+  ( BasesState (..),
+    GameState (..),
+    HalfInning (..),
+    Log (..),
+    Player (..),
+    StrikeAction (..),
+  )
 import Game.State (GameRef, advanceGameState, getCurrentGameState)
 import Servant
 import Text.Blaze.Html5 as H
@@ -16,6 +23,10 @@ getGameDataRow gameRef = do
   return $ gameStateToHtml gameState
 
 -- Advance game and return new state as HTML row
+-- TODO:
+--  - Move this to Game module
+--  - Refactor logic so that strike action is not determined by even/odd dice roll.
+--    It should instead use the batting average, like it does if a strike action is rolled.
 advanceGameDataRow :: GameRef -> Handler Html
 advanceGameDataRow gameRef = do
   (_, newState) <- liftIO $ advanceGameState gameRef
@@ -77,7 +88,7 @@ gameStateToHtml gs = H.div ! A.id (stringValue "game-frame") ! A.class_ (stringV
         then H.p ! A.style (stringValue "color: #7f8c8d; font-style: italic;") $ H.toHtml "No pitches yet..."
         else
           H.div ! A.class_ (stringValue "log-entries") ! A.style (stringValue "max-height: 500px; overflow-y: auto; border: 1px solid #bdc3c7; border-radius: 5px;") $
-            mapM_ renderLogEntry (reverse $ pitchLog gs)
+            mapM_ renderLogEntry (pitchLog gs)
 
 -- Render individual log entry
 renderLogEntry :: Log -> Html
