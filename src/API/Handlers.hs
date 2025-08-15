@@ -24,56 +24,60 @@ advanceGameDataRow gameRef = do
 -- Convert GameState to HTML Frame with baseball diamond
 gameStateToHtml :: GameState -> Html
 gameStateToHtml gs = H.div ! A.id (stringValue "game-frame") ! A.class_ (stringValue "game-frame") $ do
-  -- Scoreboard
-  H.div ! A.class_ (stringValue "scoreboard") $ do
-    H.div ! A.class_ (stringValue "score-section") $ do
-      H.h3 (H.toHtml "Away")
-      H.div ! A.class_ (stringValue "score") $ H.toHtml $ show $ awayScore gs
-    H.div ! A.class_ (stringValue "score-section") $ do
-      H.h3 (H.toHtml "Home")
-      H.div ! A.class_ (stringValue "score") $ H.toHtml $ show $ homeScore gs
+  -- Main container with side-by-side layout
+  H.div ! A.class_ (stringValue "main-game-container") ! A.style (stringValue "display: flex; gap: 20px;") $ do
+    -- Left side: Game content
+    H.div ! A.class_ (stringValue "game-content") ! A.style (stringValue "flex: 2;") $ do
+      -- Scoreboard
+      H.div ! A.class_ (stringValue "scoreboard") $ do
+        H.div ! A.class_ (stringValue "score-section") $ do
+          H.h3 (H.toHtml "Away")
+          H.div ! A.class_ (stringValue "score") $ H.toHtml $ show $ awayScore gs
+        H.div ! A.class_ (stringValue "score-section") $ do
+          H.h3 (H.toHtml "Home")
+          H.div ! A.class_ (stringValue "score") $ H.toHtml $ show $ homeScore gs
 
-  -- Game Info
-  H.div ! A.class_ (stringValue "game-info") $ do
-    H.h2 $ H.toHtml $ "Inning " ++ show (inning gs) ++ " - " ++ show (halfInning gs)
+      -- Game Info
+      H.div ! A.class_ (stringValue "game-info") $ do
+        H.h2 $ H.toHtml $ "Inning " ++ show (inning gs) ++ " - " ++ show (halfInning gs)
 
-  -- Baseball Diamond
-  H.div ! A.class_ (stringValue "diamond-container") $ do
-    H.div ! A.class_ (stringValue "diamond") $ H.toHtml ""
-    -- Home plate
-    H.div ! A.class_ (stringValue (if isJust (home $ bases gs) then "base home-plate occupied" else "base home-plate")) $ H.toHtml ""
-    -- First base
-    H.div ! A.class_ (stringValue (if isJust (first $ bases gs) then "base first-base occupied" else "base first-base")) $ H.toHtml ""
-    -- Second base
-    H.div ! A.class_ (stringValue (if isJust (second $ bases gs) then "base second-base occupied" else "base second-base")) $ H.toHtml ""
-    -- Third base
-    H.div ! A.class_ (stringValue (if isJust (third $ bases gs) then "base third-base occupied" else "base third-base")) $ H.toHtml ""
+      -- Baseball Diamond
+      H.div ! A.class_ (stringValue "diamond-container") $ do
+        H.div ! A.class_ (stringValue "diamond") $ H.toHtml ""
+        -- Home plate
+        H.div ! A.class_ (stringValue (if isJust (home $ bases gs) then "base home-plate occupied" else "base home-plate")) $ H.toHtml ""
+        -- First base
+        H.div ! A.class_ (stringValue (if isJust (first $ bases gs) then "base first-base occupied" else "base first-base")) $ H.toHtml ""
+        -- Second base
+        H.div ! A.class_ (stringValue (if isJust (second $ bases gs) then "base second-base occupied" else "base second-base")) $ H.toHtml ""
+        -- Third base
+        H.div ! A.class_ (stringValue (if isJust (third $ bases gs) then "base third-base occupied" else "base third-base")) $ H.toHtml ""
 
-  -- Current Batter Info
-  H.div ! A.class_ (stringValue "batter-info") $ do
-    H.h3 (H.toHtml "Current Batter")
-    H.p $ H.toHtml $ maybe "None" (\player -> Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")") $ currentBatter gs
+      -- Current Batter Info
+      H.div ! A.class_ (stringValue "batter-info") $ do
+        H.h3 (H.toHtml "Current Batter")
+        H.p $ H.toHtml $ maybe "None" (\player -> Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")") $ currentBatter gs
 
-  -- Count Display
-  H.div ! A.class_ (stringValue "count") $ do
-    H.div ! A.class_ (stringValue "count-item") $ do
-      H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ balls gs
-      H.div ! A.class_ (stringValue "label") $ H.toHtml "BALLS"
-    H.div ! A.class_ (stringValue "count-item") $ do
-      H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ strikes gs
-      H.div ! A.class_ (stringValue "label") $ H.toHtml "STRIKES"
-    H.div ! A.class_ (stringValue "count-item") $ do
-      H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ outs gs
-      H.div ! A.class_ (stringValue "label") $ H.toHtml "OUTS"
+      -- Count Display
+      H.div ! A.class_ (stringValue "count") $ do
+        H.div ! A.class_ (stringValue "count-item") $ do
+          H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ balls gs
+          H.div ! A.class_ (stringValue "label") $ H.toHtml "BALLS"
+        H.div ! A.class_ (stringValue "count-item") $ do
+          H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ strikes gs
+          H.div ! A.class_ (stringValue "label") $ H.toHtml "STRIKES"
+        H.div ! A.class_ (stringValue "count-item") $ do
+          H.div ! A.class_ (stringValue "number") $ H.toHtml $ show $ outs gs
+          H.div ! A.class_ (stringValue "label") $ H.toHtml "OUTS"
 
-  -- Game Log
-  H.div ! A.class_ (stringValue "game-log") ! A.style (stringValue "margin-top: 30px;") $ do
-    H.h3 ! A.style (stringValue "color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Game Log"
-    if null (pitchLog gs)
-      then H.p ! A.style (stringValue "color: #7f8c8d; font-style: italic;") $ H.toHtml "No pitches yet..."
-      else
-        H.div ! A.class_ (stringValue "log-entries") ! A.style (stringValue "max-height: 300px; overflow-y: auto; border: 1px solid #bdc3c7; border-radius: 5px;") $
-          mapM_ renderLogEntry (reverse $ pitchLog gs)
+    -- Right side: Game Log
+    H.div ! A.class_ (stringValue "game-log") ! A.style (stringValue "flex: 1; min-width: 300px;") $ do
+      H.h3 ! A.style (stringValue "color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Game Log"
+      if null (pitchLog gs)
+        then H.p ! A.style (stringValue "color: #7f8c8d; font-style: italic;") $ H.toHtml "No pitches yet..."
+        else
+          H.div ! A.class_ (stringValue "log-entries") ! A.style (stringValue "max-height: 500px; overflow-y: auto; border: 1px solid #bdc3c7; border-radius: 5px;") $
+            mapM_ renderLogEntry (reverse $ pitchLog gs)
 
 -- Render individual log entry
 renderLogEntry :: Log -> Html
