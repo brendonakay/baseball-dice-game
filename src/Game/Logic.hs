@@ -32,6 +32,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe (isJust)
 import GHC.Generics (Generic)
 import System.IO (hFlush, stdout)
+import System.Random (randomRIO)
 
 data Pitch = Ball | Strike
   deriving (Show)
@@ -55,7 +56,10 @@ debugStateChange description action = do
 
 data Player = Player
   { name :: String,
-    number :: Int
+    number :: Int,
+    battingAverage :: Double,
+    onBasePercentage :: Double,
+    sluggingPercentage :: Double
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -348,7 +352,16 @@ checkStrikes = do
 
 runStrikeAction :: Int -> Int -> Game StrikeAction
 runStrikeAction a b = do
-  let strikeAction = getStrikeAction a b
+  gs <- get
+  case currentBatter gs of
+    Nothing -> pure NoAction -- Do nothing if no current batter
+    Just player -> do
+      -- Use new batting average system
+      strikeAction <- liftIO $ getPlayerStrikeAction player a b
+      executeStrikeAction strikeAction
+
+executeStrikeAction :: StrikeAction -> Game StrikeAction
+executeStrikeAction strikeAction = do
   case strikeAction of
     FieldingError -> do
       runFieldingError
@@ -467,6 +480,7 @@ data StrikeAction
   | NoAction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- Legacy dice-based hit determination (kept for reference)
 getStrikeAction :: Int -> Int -> StrikeAction
 getStrikeAction a b =
   case (a, b) of
@@ -492,6 +506,62 @@ getStrikeAction a b =
     (5, 6) -> PopOut
     (6, 6) -> HomeRun
     (_, _) -> NoAction
+
+-- New batting average-based hit determination
+getPlayerStrikeAction :: Player -> Int -> Int -> IO StrikeAction
+getPlayerStrikeAction player dice1 dice2 = do
+  hitRoll <- randomRIO (0.0, 1.0) :: IO Double
+  let diceModifier = (fromIntegral (dice1 + dice2)) / 12.0 -- Normalize dice to 0.17-1.0 range
+      adjustedAverage = battingAverage player * diceModifier
+
+  if hitRoll <= adjustedAverage
+    then determineHitType player dice1 dice2
+    else determineOutType dice1 dice2
+
+-- Determine type of hit based on player's slugging percentage and dice
+determineHitType :: Player -> Int -> Int -> IO StrikeAction
+determineHitType player dice1 dice2 = do
+  hitTypeRoll <- randomRIO (0.0, 1.0) :: IO Double
+  let powerFactor = sluggingPercentage player
+      diceSum = dice1 + dice2
+
+  -- Hit type distribution based on realistic baseball statistics:
+  -- Singles: 70% of hits, Doubles: 20% of hits, Triples: 5% of hits, Home Runs: 5% of hits
+  -- Adjusted by player's slugging percentage for power hitters
+  let singleThreshold = 0.70 - (powerFactor - 0.4) * 0.2 -- Higher power = fewer singles
+      doubleThreshold = singleThreshold + 0.20 + (powerFactor - 0.4) * 0.1
+      tripleThreshold = doubleThreshold + 0.05 + (if diceSum >= 10 then 0.02 else 0.0)
+
+  if hitTypeRoll <= singleThreshold
+    then return HitSingle
+    else
+      if hitTypeRoll <= doubleThreshold
+        then return HitDouble
+        else
+          if hitTypeRoll <= tripleThreshold
+            then return HitTriple
+            else return HomeRun
+
+-- Determine type of out based on dice
+determineOutType :: Int -> Int -> IO StrikeAction
+determineOutType dice1 dice2 = do
+  outTypeRoll <- randomRIO (0.0, 1.0) :: IO Double
+  let diceSum = dice1 + dice2
+
+  -- Special actions based on dice combinations (preserving some original logic)
+  case (dice1, dice2) of
+    (1, 3) -> return HitByPitch -- Keep hit by pitch on specific dice
+    (4, 4) -> return FieldingError -- Keep fielding error on double 4s
+    _ ->
+      if outTypeRoll <= 0.4
+        then return GroundOut
+        else
+          if outTypeRoll <= 0.7
+            then return FlyOut
+            else
+              if outTypeRoll <= 0.9
+                then return PopOut
+                else return CalledStrike
 
 pitchLogToString :: PitchLog -> [[String]]
 pitchLogToString = map pitchLogToStringList
