@@ -21,6 +21,7 @@ module Game.Logic
     StrikeAction (..),
     HalfInning (..),
     BasesState (..),
+    Log (..),
   )
 where
 

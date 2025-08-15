@@ -34,7 +34,12 @@ generateHTMXPage = docTypeHtml $ do
             ".count { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }",
             ".count-item { text-align: center; }",
             ".count-item .number { font-size: 2em; font-weight: bold; color: #2c3e50; }",
-            ".count-item .label { font-size: 0.9em; color: #7f8c8d; }"
+            ".count-item .label { font-size: 0.9em; color: #7f8c8d; }",
+            ".game-log { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
+            ".log-entries { scrollbar-width: thin; scrollbar-color: #bdc3c7 #f8f9fa; }",
+            ".log-entries::-webkit-scrollbar { width: 8px; }",
+            ".log-entries::-webkit-scrollbar-track { background: #f8f9fa; }",
+            ".log-entries::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }"
           ]
   H.body $ do
     H.h1 ! A.style "text-align: center; color: #2c3e50;" $ "Baseball Game"
