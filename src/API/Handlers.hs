@@ -5,16 +5,15 @@ import Data.Maybe (isJust)
 import Game.Logic
   ( BasesState (..),
     GameState (..),
-    HalfInning (..),
     Log (..),
     Player (..),
     StrikeAction (..),
+    isGameOver,
   )
 import Game.State (GameRef, advanceGameState, getCurrentGameState)
 import Servant
 import Text.Blaze.Html5 as H
 import Text.Blaze.Html5.Attributes as A
-import Text.Blaze.Internal (stringValue)
 
 -- Get current game state and render as HTML row
 getGameDataRow :: GameRef -> Handler Html
@@ -29,8 +28,12 @@ getGameDataRow gameRef = do
 --    It should instead use the batting average, like it does if a strike action is rolled.
 advanceGameDataFrame :: GameRef -> Handler Html
 advanceGameDataFrame gameRef = do
-  (_, newState) <- liftIO $ advanceGameState gameRef
-  return $ gameStateToHtml newState
+  currentState <- liftIO $ getCurrentGameState gameRef
+  if isGameOver currentState
+    then return $ gameStateToHtml currentState
+    else do
+      (_, newState) <- liftIO $ advanceGameState gameRef
+      return $ gameStateToHtml newState
 
 -- Convert GameState to HTML Frame with baseball diamond
 gameStateToHtml :: GameState -> Html
@@ -50,7 +53,15 @@ gameStateToHtml gs = H.div ! A.id (stringValue "game-frame") ! A.class_ (stringV
 
       -- Game Info
       H.div ! A.class_ (stringValue "game-info") $ do
-        H.h2 $ H.toHtml $ "Inning " ++ show (inning gs) ++ " - " ++ show (halfInning gs)
+        if isGameOver gs
+          then do
+            H.h2 ! A.style (stringValue "color: #e74c3c; font-size: 2.5em; text-align: center; margin: 20px 0;") $ H.toHtml "GAME OVER"
+            H.h3 ! A.style (stringValue "text-align: center; color: #2c3e50;") $
+              H.toHtml $
+                let winner = if homeScore gs > awayScore gs then "Home" else "Away"
+                    finalScore = show (awayScore gs) ++ "-" ++ show (homeScore gs)
+                 in winner ++ " Team Wins! Final Score: " ++ finalScore
+          else H.h2 $ H.toHtml $ "Inning " ++ show (inning gs) ++ " - " ++ show (halfInning gs)
 
       -- Baseball Diamond
       H.div ! A.class_ (stringValue "diamond-container") $ do

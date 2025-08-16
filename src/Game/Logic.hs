@@ -14,6 +14,7 @@ module Game.Logic
     pitchLogToString,
     runPitch,
     testStateChange,
+    isGameOver,
     AwayTeam,
     GameState (..),
     HomeTeam,
@@ -317,20 +318,43 @@ nextHalfInning = do
           currentBatter = Nothing,
           halfInning = Bottom
         }
-    Bottom -> modify $ \gs' ->
-      gs'
-        { inning = inning gs' + 1,
-          outs = 0,
-          balls = 0,
-          bases = emptyBases,
-          currentBatter = Nothing,
-          halfInning = Top
-        }
+    Bottom -> do
+      let currentInning = inning gs
+          homeWinning = homeScore gs > awayScore gs
+
+      if currentInning >= 9 && homeWinning
+        then return ()
+        else
+          if currentInning >= 9 && homeScore gs == awayScore gs
+            then modify $ \gs' ->
+              gs'
+                { inning = inning gs' + 1,
+                  outs = 0,
+                  balls = 0,
+                  bases = emptyBases,
+                  currentBatter = Nothing,
+                  halfInning = Top
+                }
+            else modify $ \gs' ->
+              gs'
+                { inning = inning gs' + 1,
+                  outs = 0,
+                  balls = 0,
+                  bases = emptyBases,
+                  currentBatter = Nothing,
+                  halfInning = Top
+                }
 
 checkOuts :: Game ()
 checkOuts = do
   gs <- get
-  when (outs gs == 3) nextHalfInning
+  when (outs gs == 3) $ do
+    let currentInning = inning gs
+        awayWinning = awayScore gs > homeScore gs
+
+    if currentInning >= 9 && halfInning gs == Top && awayWinning
+      then return ()
+      else nextHalfInning
 
 checkScore :: Game ()
 checkScore = do
@@ -348,6 +372,14 @@ checkStrikes :: Game ()
 checkStrikes = do
   gs <- get
   when (strikes gs == 3) addOut
+
+isGameOver :: GameState -> Bool
+isGameOver gs =
+  let currentInning = inning gs
+      awayWinning = awayScore gs > homeScore gs
+      homeWinning = homeScore gs > awayScore gs
+   in (currentInning >= 9 && halfInning gs == Bottom && homeWinning)
+        || (currentInning >= 9 && halfInning gs == Top && awayWinning)
 
 runStrikeAction :: Int -> Int -> Game StrikeAction
 runStrikeAction a b = do
@@ -439,12 +471,13 @@ runHitDouble = do
   gs <- get
   let cb = currentBatter gs
       b = bases gs
-      newBases = BasesState
-        { first = Nothing,
-          second = cb,
-          third = first b,
-          home = second b
-        }
+      newBases =
+        BasesState
+          { first = Nothing,
+            second = cb,
+            third = first b,
+            home = second b
+          }
   modify $ \gs' -> gs' {bases = newBases}
   checkScore
   clearStrikes
@@ -461,12 +494,13 @@ runHitTriple = do
   gs <- get
   let cb = currentBatter gs
       b = bases gs
-      newBases = BasesState
-        { first = Nothing,
-          second = Nothing,
-          third = cb,
-          home = first b
-        }
+      newBases =
+        BasesState
+          { first = Nothing,
+            second = Nothing,
+            third = cb,
+            home = first b
+          }
   modify $ \gs' -> gs' {bases = newBases}
   checkScore
   clearStrikes
@@ -476,14 +510,14 @@ runHitTriple = do
 runHomeRun :: Game ()
 runHomeRun = do
   gs <- get
-  let cb = currentBatter gs
-      b = bases gs
-      newBases = BasesState
-        { first = Nothing,
-          second = Nothing,
-          third = Nothing,
-          home = Nothing
-        }
+  let b = bases gs
+      newBases =
+        BasesState
+          { first = Nothing,
+            second = Nothing,
+            third = Nothing,
+            home = Nothing
+          }
       runCount = 1 + length (catMaybes [first b, second b, third b])
       hi = halfInning gs
   modify $ \gs' -> gs' {bases = newBases}
