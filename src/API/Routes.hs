@@ -3,7 +3,7 @@
 
 module API.Routes where
 
-import API.Handlers (advanceGameDataRow, getGameDataRow)
+import API.Handlers (advanceGameDataFrame)
 import Game.State (GameRef)
 import Servant
 import Servant.HTML.Blaze (HTML)
@@ -21,7 +21,7 @@ type API =
 server :: GameRef -> Server API
 server gameRef =
   return generateHTMXPage
-    :<|> advanceGameDataRow gameRef
+    :<|> advanceGameDataFrame gameRef
 
 -- Create the application with game state
 app :: GameRef -> Application

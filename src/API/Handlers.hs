@@ -27,8 +27,8 @@ getGameDataRow gameRef = do
 --  - Move this to Game module
 --  - Refactor logic so that strike action is not determined by even/odd dice roll.
 --    It should instead use the batting average, like it does if a strike action is rolled.
-advanceGameDataRow :: GameRef -> Handler Html
-advanceGameDataRow gameRef = do
+advanceGameDataFrame :: GameRef -> Handler Html
+advanceGameDataFrame gameRef = do
   (_, newState) <- liftIO $ advanceGameState gameRef
   return $ gameStateToHtml newState
 
