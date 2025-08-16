@@ -25,10 +25,10 @@ module Game.Logic
   )
 where
 
-import Control.Monad (when)
+import Control.Monad (replicateM_, when)
 import Control.Monad.State
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Maybe (isJust)
+import Data.Maybe (catMaybes, isJust)
 import GHC.Generics (Generic)
 import System.IO (hFlush, stdout)
 import System.Random (randomRIO)
@@ -436,8 +436,19 @@ runHitByPitch = walkRunner
 
 runHitDouble :: Game ()
 runHitDouble = do
-  advanceRunners
-  advanceRunners
+  gs <- get
+  let cb = currentBatter gs
+      b = bases gs
+      newBases = BasesState
+        { first = Nothing,
+          second = cb,
+          third = first b,
+          home = second b
+        }
+  modify $ \gs' -> gs' {bases = newBases}
+  checkScore
+  clearStrikes
+  clearBalls
   batterUp
 
 runHitSingle :: Game ()
@@ -447,17 +458,38 @@ runHitSingle = do
 
 runHitTriple :: Game ()
 runHitTriple = do
-  advanceRunners
-  advanceRunners
-  advanceRunners
+  gs <- get
+  let cb = currentBatter gs
+      b = bases gs
+      newBases = BasesState
+        { first = Nothing,
+          second = Nothing,
+          third = cb,
+          home = first b
+        }
+  modify $ \gs' -> gs' {bases = newBases}
+  checkScore
+  clearStrikes
+  clearBalls
   batterUp
 
 runHomeRun :: Game ()
 runHomeRun = do
-  advanceRunners
-  advanceRunners
-  advanceRunners
-  advanceRunners
+  gs <- get
+  let cb = currentBatter gs
+      b = bases gs
+      newBases = BasesState
+        { first = Nothing,
+          second = Nothing,
+          third = Nothing,
+          home = Nothing
+        }
+      runCount = 1 + length (catMaybes [first b, second b, third b])
+      hi = halfInning gs
+  modify $ \gs' -> gs' {bases = newBases}
+  replicateM_ runCount (addRun hi)
+  clearStrikes
+  clearBalls
   batterUp
 
 runPopOut :: Game ()
