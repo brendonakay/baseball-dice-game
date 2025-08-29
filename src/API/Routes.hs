@@ -3,7 +3,7 @@
 
 module API.Routes where
 
-import API.Handlers (advanceGameDataFrame)
+import API.Handlers (advanceGameDataFrame, configPageHandler, startGameHandler, updatePlayerHandler)
 import Game.State (GameRef)
 import Servant
 import Servant.HTML.Blaze (HTML)
@@ -16,12 +16,21 @@ type API =
   Get '[HTML] Html
     -- /data (advances game state)
     :<|> "data" :> Get '[HTML] Html
+    -- /config (team configuration page)
+    :<|> "config" :> Get '[HTML] Html
+    -- /start-game (starts game with configured teams)
+    :<|> "start-game" :> Post '[HTML] Html
+    -- /update-player (updates a single player)
+    :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
 
 -- Implement the server handlers
 server :: GameRef -> Server API
 server gameRef =
-  return generateHTMXPage
+  configPageHandler gameRef
     :<|> advanceGameDataFrame gameRef
+    :<|> configPageHandler gameRef
+    :<|> startGameHandler gameRef
+    :<|> updatePlayerHandler gameRef
 
 -- Create the application with game state
 app :: GameRef -> Application

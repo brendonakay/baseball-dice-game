@@ -1,6 +1,7 @@
 module Game.State
   ( GameRef,
     initializeGameState,
+    initializeGameStateWithTeams,
     advanceGameState,
     getCurrentGameState,
     resetGameState,
@@ -155,6 +156,12 @@ initializeGameState = do
         ]
 
   -- Initialize game state with teams
+  (_, initialState) <- runStateT (initialGameState homeTeam awayTeam) newGameState
+  newIORef initialState
+
+-- Initialize game state with custom teams
+initializeGameStateWithTeams :: [Player] -> [Player] -> IO GameRef
+initializeGameStateWithTeams homeTeam awayTeam = do
   (_, initialState) <- runStateT (initialGameState homeTeam awayTeam) newGameState
   newIORef initialState
 
