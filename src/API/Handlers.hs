@@ -1,6 +1,8 @@
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
+import Data.IORef (writeIORef)
+import qualified Data.List as List
 import Data.Maybe (isJust)
 import Game.Logic
   ( BasesState (..),
@@ -11,13 +13,11 @@ import Game.Logic
     isGameOver,
   )
 import Game.State (GameRef, advanceGameState, getCurrentGameState, initializeGameStateWithTeams)
-import Data.IORef (writeIORef)
-import qualified Data.List as List
-import Text.Read (readMaybe)
 import Servant
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Blaze.Htmx as Htmx
+import Text.Read (readMaybe)
 
 -- Get current game state and render as HTML row
 getGameDataRow :: GameRef -> Handler Html
@@ -47,12 +47,13 @@ gameStateToHtml gs = gameContainerHtml gs
 gameContainerHtml :: GameState -> Html
 gameContainerHtml gs = H.div ! A.id (stringValue "game-container") $ do
   if not (isGameOver gs)
-    then H.button
-      ! Htmx.hxGet (stringValue "/data")
-      ! Htmx.hxTarget (stringValue "#game-container")
-      ! Htmx.hxSwap (stringValue "outerHTML")
-      ! A.style (stringValue "display: block; margin: 0 auto 20px auto; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;")
-      $ H.toHtml "Continue Game"
+    then
+      H.button
+        ! Htmx.hxGet (stringValue "/data")
+        ! Htmx.hxTarget (stringValue "#game-container")
+        ! Htmx.hxSwap (stringValue "outerHTML")
+        ! A.style (stringValue "display: block; margin: 0 auto 20px auto; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;")
+        $ H.toHtml "Continue Game"
     else H.div ! A.style (stringValue "text-align: center; margin: 20px;") $ do
       H.p ! A.style (stringValue "font-size: 1.2em; color: #2c3e50;") $ H.toHtml "Game Complete!"
       H.button
@@ -243,44 +244,57 @@ configPageToHtml homeTeamPlayers awayTeamPlayers = do
         H.div ! A.class_ (stringValue "teams-container") $ do
           H.div ! A.class_ (stringValue "team-section") $ do
             H.h2 $ H.toHtml "Home Team"
-            mapM_ (renderPlayerForm "home") (zip [0..] homeTeamPlayers)
+            mapM_ (renderPlayerForm "home") (zip [0 ..] homeTeamPlayers)
           H.div ! A.class_ (stringValue "team-section") $ do
             H.h2 $ H.toHtml "Away Team"
-            mapM_ (renderPlayerForm "away") (zip [0..] awayTeamPlayers)
+            mapM_ (renderPlayerForm "away") (zip [0 ..] awayTeamPlayers)
         H.div ! A.class_ (stringValue "start-button-container") $ do
           H.form ! A.action (stringValue "/start-game") ! A.method (stringValue "post") $
-            H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "start-game-btn") $ H.toHtml "Start Game"
+            H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "start-game-btn") $
+              H.toHtml "Start Game"
 
 -- Render individual player configuration form
 renderPlayerForm :: String -> (Int, Player) -> Html
 renderPlayerForm teamType (idx, player) = do
   H.div ! A.class_ (stringValue "player-form") ! A.id (stringValue $ "player-" ++ teamType ++ "-" ++ show idx) $ do
     H.h3 $ H.toHtml $ Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")"
-    H.form ! Htmx.hxPost (stringValue "/update-player")
-           ! Htmx.hxTarget (stringValue $ "#player-" ++ teamType ++ "-" ++ show idx)
-           ! Htmx.hxSwap (stringValue "outerHTML") $ do
-      H.input ! A.type_ (stringValue "hidden") ! A.name (stringValue "team") ! A.value (stringValue teamType)
-      H.input ! A.type_ (stringValue "hidden") ! A.name (stringValue "player") ! A.value (stringValue $ show idx)
-      
-      H.div ! A.class_ (stringValue "form-row") $ do
-        H.label $ H.toHtml "Name: "
-        H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ Game.Logic.name player)
-      
-      H.div ! A.class_ (stringValue "form-row") $ do
-        H.label $ H.toHtml "Number: "
-        H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ Game.Logic.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
-      
-      H.div ! A.class_ (stringValue "form-row") $ do
-        H.label $ H.toHtml "Batting Average: "
-        H.input ! A.type_ (stringValue "number") ! A.name (stringValue "battingAverage") ! A.value (stringValue $ show $ battingAverage player) 
-                ! A.min (stringValue "0.150") ! A.max (stringValue "0.400") ! A.step (stringValue "0.001")
-      
-      H.div ! A.class_ (stringValue "form-row") $ do
-        H.label $ H.toHtml "Slugging Percentage: "
-        H.input ! A.type_ (stringValue "number") ! A.name (stringValue "sluggingPercentage") ! A.value (stringValue $ show $ sluggingPercentage player)
-                ! A.min (stringValue "0.300") ! A.max (stringValue "0.700") ! A.step (stringValue "0.001")
-      
-      H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "update-btn") $ H.toHtml "Update"
+    H.form
+      ! Htmx.hxPost (stringValue "/update-player")
+      ! Htmx.hxTarget (stringValue $ "#player-" ++ teamType ++ "-" ++ show idx)
+      ! Htmx.hxSwap (stringValue "outerHTML")
+      $ do
+        H.input ! A.type_ (stringValue "hidden") ! A.name (stringValue "team") ! A.value (stringValue teamType)
+        H.input ! A.type_ (stringValue "hidden") ! A.name (stringValue "player") ! A.value (stringValue $ show idx)
+
+        H.div ! A.class_ (stringValue "form-row") $ do
+          H.label $ H.toHtml "Name: "
+          H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ Game.Logic.name player)
+
+        H.div ! A.class_ (stringValue "form-row") $ do
+          H.label $ H.toHtml "Number: "
+          H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ Game.Logic.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
+
+        H.div ! A.class_ (stringValue "form-row") $ do
+          H.label $ H.toHtml "Batting Average: "
+          H.input
+            ! A.type_ (stringValue "number")
+            ! A.name (stringValue "battingAverage")
+            ! A.value (stringValue $ show $ battingAverage player)
+            ! A.min (stringValue "0.150")
+            ! A.max (stringValue "0.400")
+            ! A.step (stringValue "0.001")
+
+        H.div ! A.class_ (stringValue "form-row") $ do
+          H.label $ H.toHtml "Slugging Percentage: "
+          H.input
+            ! A.type_ (stringValue "number")
+            ! A.name (stringValue "sluggingPercentage")
+            ! A.value (stringValue $ show $ sluggingPercentage player)
+            ! A.min (stringValue "0.300")
+            ! A.max (stringValue "0.700")
+            ! A.step (stringValue "0.001")
+
+        H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "update-btn") $ H.toHtml "Update"
 
 -- Game redirect HTML (redirects to main game)
 gameRedirectHtml :: Html
@@ -294,49 +308,51 @@ gameRedirectHtml = do
 
 -- CSS for configuration page
 configPageCSS :: String
-configPageCSS = unlines
-  [ "body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }",
-    ".config-container { max-width: 1200px; margin: 0 auto; }",
-    "h1 { text-align: center; color: #2c3e50; margin-bottom: 40px; }",
-    ".teams-container { display: flex; gap: 40px; }",
-    ".team-section { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }",
-    "h2 { color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px; }",
-    ".player-form { background: #f8f9fa; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #3498db; }",
-    "h3 { margin: 0 0 15px 0; color: #2c3e50; }",
-    ".form-row { margin: 10px 0; display: flex; align-items: center; }",
-    "label { min-width: 150px; font-weight: bold; }",
-    "input { padding: 5px; border: 1px solid #ddd; border-radius: 3px; flex: 1; margin-left: 10px; }",
-    ".update-btn { background: #27ae60; color: white; border: none; padding: 5px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px; }",
-    ".update-btn:hover { background: #229954; }",
-    ".start-button-container { text-align: center; margin: 40px 0; }",
-    ".start-game-btn { background: #e74c3c; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 5px; cursor: pointer; }",
-    ".start-game-btn:hover { background: #c0392b; }"
-  ]
+configPageCSS =
+  unlines
+    [ "body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }",
+      ".config-container { max-width: 1200px; margin: 0 auto; }",
+      "h1 { text-align: center; color: #2c3e50; margin-bottom: 40px; }",
+      ".teams-container { display: flex; gap: 40px; }",
+      ".team-section { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }",
+      "h2 { color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px; }",
+      ".player-form { background: #f8f9fa; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #3498db; }",
+      "h3 { margin: 0 0 15px 0; color: #2c3e50; }",
+      ".form-row { margin: 10px 0; display: flex; align-items: center; }",
+      "label { min-width: 150px; font-weight: bold; }",
+      "input { padding: 5px; border: 1px solid #ddd; border-radius: 3px; flex: 1; margin-left: 10px; }",
+      ".update-btn { background: #27ae60; color: white; border: none; padding: 5px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px; }",
+      ".update-btn:hover { background: #229954; }",
+      ".start-button-container { text-align: center; margin: 40px 0; }",
+      ".start-game-btn { background: #e74c3c; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 5px; cursor: pointer; }",
+      ".start-game-btn:hover { background: #c0392b; }"
+    ]
 
 -- CSS styles for the game page (based on original generateHTMXPage)
 gamePageCSS :: String
-gamePageCSS = unlines
-  [ ".game-frame { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }",
-    ".scoreboard { display: flex; justify-content: space-between; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }",
-    ".score-section h3 { margin: 0 0 5px 0; }",
-    ".score-section .score { font-size: 2em; font-weight: bold; }",
-    ".game-info { text-align: center; margin-bottom: 20px; }",
-    ".diamond-container { position: relative; width: 300px; height: 300px; margin: 0 auto; }",
-    ".diamond { width: 200px; height: 200px; background: #8B4513; transform: rotate(45deg); position: absolute; top: 50px; left: 50px; border-radius: 15px; }",
-    ".base { position: absolute; width: 20px; height: 20px; background: white; border: 2px solid #333; }",
-    ".base.occupied { background: #ff6b35; }",
-    ".first-base { top: 140px; right: 40px; }",
-    ".second-base { top: 40px; right: 140px; }",
-    ".third-base { top: 140px; left: 40px; }",
-    ".home-plate { bottom: 40px; left: 140px; border-radius: 50%; }",
-    ".batter-info { text-align: center; margin: 20px 0; padding: 15px; background: #ecf0f1; border-radius: 8px; }",
-    ".count { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }",
-    ".count-item { text-align: center; }",
-    ".count-item .number { font-size: 2em; font-weight: bold; color: #2c3e50; }",
-    ".count-item .label { font-size: 0.9em; color: #7f8c8d; }",
-    ".game-log { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
-    ".log-entries { scrollbar-width: thin; scrollbar-color: #bdc3c7 #f8f9fa; }",
-    ".log-entries::-webkit-scrollbar { width: 8px; }",
-    ".log-entries::-webkit-scrollbar-track { background: #f8f9fa; }",
-    ".log-entries::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }"
-  ]
+gamePageCSS =
+  unlines
+    [ ".game-frame { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }",
+      ".scoreboard { display: flex; justify-content: space-between; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }",
+      ".score-section h3 { margin: 0 0 5px 0; }",
+      ".score-section .score { font-size: 2em; font-weight: bold; }",
+      ".game-info { text-align: center; margin-bottom: 20px; }",
+      ".diamond-container { position: relative; width: 300px; height: 300px; margin: 0 auto; }",
+      ".diamond { width: 200px; height: 200px; background: #8B4513; transform: rotate(45deg); position: absolute; top: 50px; left: 50px; border-radius: 15px; }",
+      ".base { position: absolute; width: 20px; height: 20px; background: white; border: 2px solid #333; }",
+      ".base.occupied { background: #ff6b35; }",
+      ".first-base { top: 140px; right: 40px; }",
+      ".second-base { top: 40px; right: 140px; }",
+      ".third-base { top: 140px; left: 40px; }",
+      ".home-plate { bottom: 40px; left: 140px; border-radius: 50%; }",
+      ".batter-info { text-align: center; margin: 20px 0; padding: 15px; background: #ecf0f1; border-radius: 8px; }",
+      ".count { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }",
+      ".count-item { text-align: center; }",
+      ".count-item .number { font-size: 2em; font-weight: bold; color: #2c3e50; }",
+      ".count-item .label { font-size: 0.9em; color: #7f8c8d; }",
+      ".game-log { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
+      ".log-entries { scrollbar-width: thin; scrollbar-color: #bdc3c7 #f8f9fa; }",
+      ".log-entries::-webkit-scrollbar { width: 8px; }",
+      ".log-entries::-webkit-scrollbar-track { background: #f8f9fa; }",
+      ".log-entries::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }"
+    ]
