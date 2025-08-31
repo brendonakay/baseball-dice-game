@@ -4,12 +4,16 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ## TODO
 
-- [ ] Create an architectural diagram separating pure and impure layers.
-- [ ] Do I rename the project to baseball card game? I was thinking "Waxball".
+- [ ] Create an architectural diagram.
+- [ ] Rename the project to baseball card game? I was thinking "Waxball".
       Or something. Or do we stick with the dice theme and try to keep that involved.
 
 ### Game
 
+Each Game module should live in `src/Game/`.
+
+- [ ] League
+- [ ] Season
 - [ ] Cards
 
 ### UI
@@ -21,9 +25,6 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 - [ ] Hot reloading.
 - [ ] Use lenses for game state operations.
-- [x] Add the ability to print state changes for debugging.
-- [x] Use `aeson` for marshalling data structures into JSON. For sending via a
-      backend web API.
 
 ## Architectural Roadmap
 

@@ -17,5 +17,4 @@ main = do
   let port = 8080
   putStrLn $ "Starting server on port " ++ show port
   putStrLn "Visit http://localhost:8080 to view the game"
-  putStrLn "Each request to /data will advance the game by one pitch"
   run port (App.app gameRef)
