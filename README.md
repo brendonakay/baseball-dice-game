@@ -4,9 +4,6 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ## TODO
 
-- [ ] Refactor the various `run` Game state functions into a Free Monadic eDSL.
-      Refer to Functional Design and Architecture by Granin for more information on
-      this pattern.
 - [ ] Create an architectural diagram separating pure and impure layers.
 - [ ] Do I rename the project to baseball card game? I was thinking "Waxball".
       Or something. Or do we stick with the dice theme and try to keep that involved.

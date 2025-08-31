@@ -1,10 +1,8 @@
 module Game.State
   ( GameRef,
     initializeGameState,
-    initializeGameStateWithTeams,
     advanceGameState,
     getCurrentGameState,
-    resetGameState,
   )
 where
 
@@ -159,12 +157,6 @@ initializeGameState = do
   (_, initialState) <- runStateT (initialGameState homeTeam awayTeam) newGameState
   newIORef initialState
 
--- Initialize game state with custom teams
-initializeGameStateWithTeams :: [Player] -> [Player] -> IO GameRef
-initializeGameStateWithTeams homeTeam awayTeam = do
-  (_, initialState) <- runStateT (initialGameState homeTeam awayTeam) newGameState
-  newIORef initialState
-
 -- Advance the game state by one pitch
 advanceGameState :: GameRef -> IO (StrikeAction, GameState)
 advanceGameState gameRef = do
@@ -184,10 +176,3 @@ advanceGameState gameRef = do
 -- Get current game state (read-only)
 getCurrentGameState :: GameRef -> IO GameState
 getCurrentGameState = readIORef
-
--- Reset game to initial state
-resetGameState :: GameRef -> IO ()
-resetGameState gameRef = do
-  newRef <- initializeGameState
-  newState <- getCurrentGameState newRef
-  writeIORef gameRef newState

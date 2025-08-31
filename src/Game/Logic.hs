@@ -8,16 +8,11 @@
 
 module Game.Logic
   ( initialGameState,
-    logFields,
     newGameState,
     pitchBallOrStrike,
-    pitchLogToString,
     runPitch,
-    testStateChange,
     isGameOver,
-    AwayTeam,
     GameState (..),
-    HomeTeam,
     Player (..),
     StrikeAction (..),
     HalfInning (..),
@@ -86,32 +81,14 @@ data Log = Log
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- It was just easier to keep a static list.
--- Maybe there's a better way to dynamically derive the list of field names
--- for this record.
-logFields :: [String]
-logFields =
-  [ "Current Batter",
-    "Strike Action",
-    "Inning",
-    "Half Inning",
-    "Home Batting",
-    "Away Batting",
-    "Home Score",
-    "Away Score",
-    "Balls",
-    "Strikes",
-    "Bases"
-  ]
-
 type PitchLog = [Log]
 
-logPitchGameState :: StrikeAction -> Game ()
-logPitchGameState s = do
+logPitchGameState :: Maybe Player -> StrikeAction -> Game ()
+logPitchGameState batter s = do
   gs <- get
   let log' =
         Log
-          { currentBatter_ = currentBatter gs,
+          { currentBatter_ = batter,
             strikeAction_ = s,
             inning_ = inning gs,
             halfInning_ = halfInning gs,
@@ -432,16 +409,18 @@ runPitch ::
   Int ->
   Game StrikeAction
 runPitch p a b = do
+  gs <- get
+  let batter = currentBatter gs
   case p of
     Ball -> do
       addBall
       -- NoAction will stand for a ball.
       -- I should look into a better abstraction.
-      logPitchGameState NoAction
+      logPitchGameState batter NoAction
       pure NoAction
     Strike -> do
       s <- runStrikeAction a b
-      logPitchGameState s
+      logPitchGameState batter s
       pure s
 
 runCalledStrike :: Game ()
@@ -599,30 +578,3 @@ determineOutType dice1 dice2 = do
               if outTypeRoll <= 0.9
                 then return PopOut
                 else return CalledStrike
-
-pitchLogToString :: PitchLog -> [[String]]
-pitchLogToString = map pitchLogToStringList
-
-pitchLogToStringList :: Log -> [String]
-pitchLogToStringList (Log cb sa i hi hb ab hs as b s o ba) =
-  [ show cb,
-    show sa,
-    show i,
-    show hi,
-    show hb,
-    show ab,
-    show hs,
-    show as,
-    show b,
-    show s,
-    show o,
-    show ba
-  ]
-
--- Test function to demonstrate state change debugging
-testStateChange :: Game ()
-testStateChange = do
-  liftIO $ putStrLn "Testing state change debugging..."
-  addStrike
-  addStrike
-  liftIO $ putStrLn "Test completed!"

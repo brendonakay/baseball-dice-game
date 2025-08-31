@@ -262,6 +262,7 @@ gameRedirectHtml = do
     H.body $ do
       H.p $ H.toHtml "Starting game..."
 
+-- TODO: Move CSS to its own file.
 -- CSS for configuration page
 configPageCSS :: String
 configPageCSS =
