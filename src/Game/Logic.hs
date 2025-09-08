@@ -18,6 +18,8 @@ module Game.Logic
     HalfInning (..),
     BasesState (..),
     Log (..),
+    HomeTeam,
+    AwayTeam,
   )
 where
 

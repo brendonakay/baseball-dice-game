@@ -66,6 +66,7 @@ executable baseball-dice-game
     other-modules:    Game.Dice
                     , Game.Logic 
                     , Game.State
+                    , Game.Season
                     , View.HTMX
                     , API.Routes
                     , API.Handlers

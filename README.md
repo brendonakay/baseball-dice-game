@@ -15,6 +15,9 @@ Each Game module should live in `src/Game/`.
 - [ ] League
 - [ ] Season
 - [ ] Cards
+- [ ] Logic
+  - Errors
+  - Pitching
 
 ### UI
 
