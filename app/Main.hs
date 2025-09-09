@@ -3,15 +3,15 @@
 module Main where
 
 import qualified API.Routes as App
-import Game.Season (newSeasonState)
 import Data.IORef (newIORef)
+import Game.Season (newSeasonState)
 import Network.Wai.Handler.Warp (run)
 
 main :: IO ()
 main = do
   -- Initialize empty season state
   putStrLn "=== Initializing Baseball Season ==="
-  let emptySeasonState = newSeasonState [] []  -- Start with empty teams
+  let emptySeasonState = newSeasonState [] [] -- Start with empty teams
   seasonRef <- newIORef emptySeasonState
   putStrLn "Season initialized and ready to start!"
 

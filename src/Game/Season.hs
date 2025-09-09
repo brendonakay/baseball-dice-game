@@ -29,7 +29,7 @@ import Control.Monad.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.IORef
 import GHC.Generics (Generic)
-import Game.Logic (GameState (..), HomeTeam, AwayTeam, initialGameState, newGameState)
+import Game.Logic (AwayTeam, GameState (..), HomeTeam, initialGameState, newGameState)
 import qualified Game.State as GS (advanceGameState)
 
 -- State Transformer for Season logic (following Game.Logic pattern)
@@ -98,12 +98,12 @@ startNextGame = do
   if isSeasonComplete seasonState
     then return Nothing
     else case currentGameState seasonState of
-      Just ongoing -> return (Just ongoing)  -- Return ongoing game
+      Just ongoing -> return (Just ongoing) -- Return ongoing game
       Nothing -> do
         -- Initialize new game state with teams from season
         (_, initializedGameState) <- liftIO $ runStateT (initialGameState (homeTeam seasonState) (awayTeam seasonState)) newGameState
         -- Store the game state in the season
-        put $ seasonState { currentGameState = Just initializedGameState }
+        put $ seasonState {currentGameState = Just initializedGameState}
         return (Just initializedGameState)
 
 -- Record the result of a completed game and update season state (StateT version)
@@ -137,13 +137,14 @@ recordGameResult finalGameState = do
           then (awayTeamStats seasonState) {wins = wins (awayTeamStats seasonState) + 1, totalRuns = totalRuns (awayTeamStats seasonState) + finalAwayScore, totalRunsAllowed = totalRunsAllowed (awayTeamStats seasonState) + finalHomeScore}
           else (awayTeamStats seasonState) {losses = losses (awayTeamStats seasonState) + 1, totalRuns = totalRuns (awayTeamStats seasonState) + finalAwayScore, totalRunsAllowed = totalRunsAllowed (awayTeamStats seasonState) + finalHomeScore}
 
-  put $ seasonState
-    { currentGameNumber = gameNum + 1,
-      gameResults = result : gameResults seasonState,
-      homeTeamStats = newHomeStats,
-      awayTeamStats = newAwayStats,
-      currentGameState = Nothing  -- Clear current game since it's finished
-    }
+  put $
+    seasonState
+      { currentGameNumber = gameNum + 1,
+        gameResults = result : gameResults seasonState,
+        homeTeamStats = newHomeStats,
+        awayTeamStats = newAwayStats,
+        currentGameState = Nothing -- Clear current game since it's finished
+      }
 
 -- Get current season state (read-only)
 getCurrentSeasonState :: SeasonRef -> IO SeasonState
@@ -180,13 +181,13 @@ advanceCurrentGame :: Season (Maybe GameState)
 advanceCurrentGame = do
   seasonState <- get
   case currentGameState seasonState of
-    Nothing -> return Nothing  -- No current game
+    Nothing -> return Nothing -- No current game
     Just gameState -> do
       -- Advance the game by one step using Game.State functionality
       gameRef <- liftIO $ newIORef gameState
       (_, advancedGameState) <- liftIO $ GS.advanceGameState gameRef
       -- Update the season state with the advanced game
-      put $ seasonState { currentGameState = Just advancedGameState }
+      put $ seasonState {currentGameState = Just advancedGameState}
       return (Just advancedGameState)
 
 -- Wrapper function for IORef integration

@@ -3,7 +3,7 @@
 
 module API.Routes where
 
-import API.Handlers (seasonPageHandler, startNewSeasonHandler, seasonConfigPageHandler, startSeasonGameHandler, updateSeasonPlayerHandler, advanceSeasonGameDataFrame, finishSeasonGameHandler, nextSeasonGameHandler)
+import API.Handlers (advanceSeasonGameDataFrame, finishSeasonGameHandler, nextSeasonGameHandler, seasonConfigPageHandler, seasonPageHandler, startNewSeasonHandler, startSeasonGameHandler, updateSeasonPlayerHandler)
 import Game.Season (SeasonRef)
 import Servant
 import Servant.HTML.Blaze (HTML)

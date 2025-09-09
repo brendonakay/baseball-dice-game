@@ -2,12 +2,12 @@ module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef (writeIORef)
-import Game.Logic (GameState (..), isGameOver, Player (..))
-import Game.Season (SeasonRef, SeasonState (..), runStartNextGame, runRecordGameResult, getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame)
+import Game.Logic (GameState (..), Player (..), isGameOver)
+import Game.Season (SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 import Servant
 import Text.Blaze.Html5 as H
 import Text.Read (readMaybe)
-import View.HTMX (seasonPageToHtml, seasonConfigPageToHtml, autoAdvancingGamePageHtml, autoAdvancingGameFrameHtml, updatePlayerAtIndex)
+import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
 
 -- Season page handler - main landing page
 seasonPageHandler :: SeasonRef -> Handler Html
@@ -41,7 +41,7 @@ startNewSeasonHandler seasonRef = do
           Player "Away H" 8 0.248 0.318 0.400,
           Player "Away I" 9 0.210 0.270 0.320
         ]
-  
+
   let newSeason = newSeasonState homeTeam awayTeam
   liftIO $ writeIORef seasonRef newSeason
   return $ seasonConfigPageToHtml homeTeam awayTeam
