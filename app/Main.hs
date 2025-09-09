@@ -3,18 +3,20 @@
 module Main where
 
 import qualified API.Routes as App
-import Game.State (initializeGameState)
+import Game.Season (newSeasonState)
+import Data.IORef (newIORef)
 import Network.Wai.Handler.Warp (run)
 
 main :: IO ()
 main = do
-  -- Initialize game state
-  putStrLn "=== Initializing Baseball Game ==="
-  gameRef <- initializeGameState
-  putStrLn "Game initialized with teams and ready to play!"
+  -- Initialize empty season state
+  putStrLn "=== Initializing Baseball Season ==="
+  let emptySeasonState = newSeasonState [] []  -- Start with empty teams
+  seasonRef <- newIORef emptySeasonState
+  putStrLn "Season initialized and ready to start!"
 
-  -- Start web server with game state
+  -- Start web server with season state
   let port = 8080
   putStrLn $ "Starting server on port " ++ show port
-  putStrLn "Visit http://localhost:8080 to view the game"
-  run port (App.app gameRef)
+  putStrLn "Visit http://localhost:8080 to start a new season"
+  run port (App.app seasonRef)

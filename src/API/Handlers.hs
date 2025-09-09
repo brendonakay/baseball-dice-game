@@ -1,48 +1,143 @@
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.IORef (writeIORef)
-import Game.Logic (GameState (..), isGameOver)
-import Game.State (GameRef, advanceGameState, getCurrentGameState)
+import Data.IORef (IORef, newIORef, writeIORef, readIORef)
+import qualified Data.List as List
+import Data.Maybe (fromMaybe)
+import Game.Logic (GameState (..), isGameOver, HomeTeam, AwayTeam, Player (..), name, number, battingAverage, sluggingPercentage)
+import Game.Season (SeasonRef, SeasonState (..), GameResult (..), runStartNextGame, runRecordGameResult, getCurrentSeasonState, isSeasonComplete, newSeasonState, WinningTeam (..))
+import Game.State (advanceGameState)
 import Servant
 import Text.Blaze.Html5 as H
-import View.HTMX
+import Text.Read (readMaybe)
+import View.HTMX (seasonPageToHtml, seasonConfigPageToHtml, autoAdvancingGamePageHtml, autoAdvancingGameFrameHtml, updatePlayerAtIndex)
 
--- Get current game state and render as HTML row
-getGameDataRow :: GameRef -> Handler Html
-getGameDataRow gameRef = do
-  gameState <- liftIO $ getCurrentGameState gameRef
-  return $ gameStateToHtml gameState
+-- Current game state for auto-advancing
+type GameRef = IORef GameState
 
--- Advance game and return new state as HTML row
--- TODO:
---  - Refactor logic so that strike action is not determined by even/odd dice roll.
---    It should instead use the batting average, like it does if a strike action is rolled.
-advanceGameDataFrame :: GameRef -> Handler Html
-advanceGameDataFrame gameRef = do
-  currentState <- liftIO $ getCurrentGameState gameRef
-  if isGameOver currentState
-    then return $ gameStateToHtml currentState
-    else do
-      (_, newState) <- liftIO $ advanceGameState gameRef
-      return $ gameStateToHtml newState
+-- Season page handler - main landing page
+seasonPageHandler :: SeasonRef -> Handler Html
+seasonPageHandler seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ seasonPageToHtml seasonState
 
--- Configuration page handler
-configPageHandler :: GameRef -> Handler Html
-configPageHandler gameRef = do
-  gameState <- liftIO $ getCurrentGameState gameRef
-  return $ configPageToHtml (homeBatting gameState) (awayBatting gameState)
+-- Start new season handler
+startNewSeasonHandler :: SeasonRef -> Handler Html
+startNewSeasonHandler seasonRef = do
+  -- Create default teams (reusing logic from Game.State)
+  let homeTeam =
+        [ Player "Home A" 1 0.285 0.350 0.450,
+          Player "Home B" 2 0.312 0.380 0.520,
+          Player "Home C" 3 0.267 0.330 0.425,
+          Player "Home D" 4 0.298 0.375 0.580,
+          Player "Home E" 5 0.245 0.315 0.390,
+          Player "Home F" 6 0.278 0.340 0.465,
+          Player "Home G" 7 0.292 0.360 0.485,
+          Player "Home H" 8 0.255 0.325 0.410,
+          Player "Home I" 9 0.220 0.280 0.340
+        ]
+  let awayTeam =
+        [ Player "Away A" 1 0.275 0.345 0.440,
+          Player "Away B" 2 0.305 0.370 0.510,
+          Player "Away C" 3 0.258 0.320 0.415,
+          Player "Away D" 4 0.289 0.365 0.565,
+          Player "Away E" 5 0.235 0.305 0.380,
+          Player "Away F" 6 0.270 0.335 0.455,
+          Player "Away G" 7 0.284 0.355 0.475,
+          Player "Away H" 8 0.248 0.318 0.400,
+          Player "Away I" 9 0.210 0.270 0.320
+        ]
+  
+  let newSeason = newSeasonState homeTeam awayTeam
+  liftIO $ writeIORef seasonRef newSeason
+  return $ seasonConfigPageToHtml homeTeam awayTeam
 
--- Start game handler - returns complete game page
-startGameHandler :: GameRef -> Handler Html
-startGameHandler gameRef = do
-  gameState <- liftIO $ getCurrentGameState gameRef
-  return $ completeGamePageHtml gameState
+-- Season configuration page handler
+seasonConfigPageHandler :: SeasonRef -> Handler Html
+seasonConfigPageHandler seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ seasonConfigPageToHtml (homeTeam seasonState) (awayTeam seasonState)
 
--- Update player handler
-updatePlayerHandler :: GameRef -> [(String, String)] -> Handler Html
-updatePlayerHandler gameRef formData = do
-  gameState <- liftIO $ getCurrentGameState gameRef
-  let updatedGameState = updatePlayerFromForm gameState formData
-  liftIO $ writeIORef gameRef updatedGameState
-  return $ configPageToHtml (homeBatting updatedGameState) (awayBatting updatedGameState)
+-- Start current season game handler
+startSeasonGameHandler :: SeasonRef -> Handler Html
+startSeasonGameHandler seasonRef = do
+  maybeGameState <- liftIO $ runStartNextGame seasonRef
+  case maybeGameState of
+    Nothing -> do
+      -- Season is complete, redirect to season page
+      seasonState <- liftIO $ getCurrentSeasonState seasonRef
+      return $ seasonPageToHtml seasonState
+    Just gameState -> do
+      -- Start auto-advancing game
+      return $ autoAdvancingGamePageHtml gameState
+
+-- Auto-advance season game data frame
+-- This is tricky - we need to track the current game state separately from season
+-- For now, we'll create a temporary game and advance it, but we need a better solution
+advanceSeasonGameDataFrame :: SeasonRef -> Handler Html
+advanceSeasonGameDataFrame seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  -- For this demo, we'll create a fresh game each time and advance it a few times
+  -- In a real implementation, we'd want to track the current game state
+  maybeGameState <- liftIO $ runStartNextGame seasonRef
+  case maybeGameState of
+    Nothing -> return $ seasonPageToHtml seasonState
+    Just initialGameState -> do
+      if isGameOver initialGameState
+        then do
+          -- Record the game result and return season page
+          liftIO $ runRecordGameResult seasonRef initialGameState
+          updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
+          return $ seasonPageToHtml updatedSeasonState
+        else do
+          -- Advance the game by one step
+          gameRef <- liftIO $ newIORef initialGameState
+          (_, newGameState) <- liftIO $ advanceGameState gameRef
+          if isGameOver newGameState
+            then do
+              -- Game finished, record result
+              liftIO $ runRecordGameResult seasonRef newGameState
+              updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
+              return $ seasonPageToHtml updatedSeasonState
+            else do
+              -- Game still ongoing, return game frame
+              return $ autoAdvancingGameFrameHtml newGameState
+
+-- Finish season game handler
+finishSeasonGameHandler :: SeasonRef -> Handler Html
+finishSeasonGameHandler seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ seasonPageToHtml seasonState
+
+-- Next season game handler
+nextSeasonGameHandler :: SeasonRef -> Handler Html
+nextSeasonGameHandler seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ seasonConfigPageToHtml (homeTeam seasonState) (awayTeam seasonState)
+
+-- Update season player handler
+updateSeasonPlayerHandler :: SeasonRef -> [(String, String)] -> Handler Html
+updateSeasonPlayerHandler seasonRef formData = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  let updatedSeasonState = updateSeasonPlayerFromForm seasonState formData
+  liftIO $ writeIORef seasonRef updatedSeasonState
+  return $ seasonConfigPageToHtml (homeTeam updatedSeasonState) (awayTeam updatedSeasonState)
+
+-- Helper function to update season player from form data
+updateSeasonPlayerFromForm :: SeasonState -> [(String, String)] -> SeasonState
+updateSeasonPlayerFromForm seasonState formData =
+  let getFormValue key = lookup key formData
+      teamType = getFormValue "team"
+      playerIndex = getFormValue "player" >>= readMaybe
+      newName = getFormValue "name"
+      newNumber = getFormValue "number" >>= readMaybe
+      newBattingAvg = getFormValue "battingAverage" >>= readMaybe
+      newSlugging = getFormValue "sluggingPercentage" >>= readMaybe
+   in case (teamType, playerIndex) of
+        (Just "home", Just idx) ->
+          let updatedHomeTeam = updatePlayerAtIndex (homeTeam seasonState) idx newName newNumber newBattingAvg newSlugging
+           in seasonState {homeTeam = updatedHomeTeam}
+        (Just "away", Just idx) ->
+          let updatedAwayTeam = updatePlayerAtIndex (awayTeam seasonState) idx newName newNumber newBattingAvg newSlugging
+           in seasonState {awayTeam = updatedAwayTeam}
+        _ -> seasonState
