@@ -30,6 +30,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.IORef
 import GHC.Generics (Generic)
 import Game.Logic (GameState (..), HomeTeam, AwayTeam, initialGameState, newGameState)
+import qualified Game.State as GS (advanceGameState)
 
 -- State Transformer for Season logic (following Game.Logic pattern)
 type Season = StateT SeasonState IO
@@ -181,9 +182,12 @@ advanceCurrentGame = do
   case currentGameState seasonState of
     Nothing -> return Nothing  -- No current game
     Just gameState -> do
-      -- Here we'd need to advance the game, but we need Game.State functionality
-      -- For now, return the same game state
-      return (Just gameState)
+      -- Advance the game by one step using Game.State functionality
+      gameRef <- liftIO $ newIORef gameState
+      (_, advancedGameState) <- liftIO $ GS.advanceGameState gameRef
+      -- Update the season state with the advanced game
+      put $ seasonState { currentGameState = Just advancedGameState }
+      return (Just advancedGameState)
 
 -- Wrapper function for IORef integration
 runAdvanceCurrentGame :: SeasonRef -> IO (Maybe GameState)

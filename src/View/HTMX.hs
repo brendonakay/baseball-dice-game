@@ -16,9 +16,9 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Text.Blaze.Htmx as Htmx
 import Text.Read (readMaybe)
 
--- Convert GameState to game container (button + frame) for HTMX updates
+-- Convert GameState to game frame for HTMX updates (preserves button container)
 gameStateToHtml :: GameState -> Html
-gameStateToHtml = gameContainerHtml
+gameStateToHtml = gameFrameHtml
 
 -- Game container with button and frame
 gameContainerHtml :: GameState -> Html
@@ -27,7 +27,7 @@ gameContainerHtml gs = H.div ! A.id (stringValue "game-container") $ do
     then
       H.button
         ! Htmx.hxGet (stringValue "/data")
-        ! Htmx.hxTarget (stringValue "#game-container")
+        ! Htmx.hxTarget (stringValue "#game-frame")
         ! Htmx.hxSwap (stringValue "outerHTML")
         ! A.style (stringValue "display: block; margin: 0 auto 20px auto; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;")
         $ H.toHtml "Continue Game"
@@ -474,7 +474,7 @@ autoAdvancingGameContainerHtml gs = H.div ! A.id (stringValue "game-container") 
         -- Auto-refresh every 2 seconds
         H.div
           ! Htmx.hxGet (stringValue "/game-data")
-          ! Htmx.hxTarget (stringValue "#game-container")
+          ! Htmx.hxTarget (stringValue "#game-frame")
           ! Htmx.hxSwap (stringValue "outerHTML")
           ! Htmx.hxTrigger (stringValue "every 1s")
           $ H.toHtml ""
@@ -488,9 +488,9 @@ autoAdvancingGameContainerHtml gs = H.div ! A.id (stringValue "game-container") 
           $ H.toHtml "Return to Season"
   gameFrameHtml gs
 
--- Auto-advancing game frame (same as regular game frame)
+-- Auto-advancing game frame (just the game frame, not the container)
 autoAdvancingGameFrameHtml :: GameState -> Html
-autoAdvancingGameFrameHtml = autoAdvancingGameContainerHtml
+autoAdvancingGameFrameHtml = gameFrameHtml
 
 -- Render individual game result
 renderGameResult :: GameResult -> Html

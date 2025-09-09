@@ -1,19 +1,13 @@
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.IORef (IORef, newIORef, writeIORef, readIORef)
-import qualified Data.List as List
-import Data.Maybe (fromMaybe)
-import Game.Logic (GameState (..), isGameOver, HomeTeam, AwayTeam, Player (..), name, number, battingAverage, sluggingPercentage)
-import Game.Season (SeasonRef, SeasonState (..), GameResult (..), runStartNextGame, runRecordGameResult, getCurrentSeasonState, isSeasonComplete, newSeasonState, WinningTeam (..))
-import Game.State (advanceGameState)
+import Data.IORef (writeIORef)
+import Game.Logic (GameState (..), isGameOver, Player (..))
+import Game.Season (SeasonRef, SeasonState (..), runStartNextGame, runRecordGameResult, getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame)
 import Servant
 import Text.Blaze.Html5 as H
 import Text.Read (readMaybe)
 import View.HTMX (seasonPageToHtml, seasonConfigPageToHtml, autoAdvancingGamePageHtml, autoAdvancingGameFrameHtml, updatePlayerAtIndex)
-
--- Current game state for auto-advancing
-type GameRef = IORef GameState
 
 -- Season page handler - main landing page
 seasonPageHandler :: SeasonRef -> Handler Html
@@ -72,36 +66,26 @@ startSeasonGameHandler seasonRef = do
       return $ autoAdvancingGamePageHtml gameState
 
 -- Auto-advance season game data frame
--- This is tricky - we need to track the current game state separately from season
--- For now, we'll create a temporary game and advance it, but we need a better solution
+-- Uses the persistent game state tracking in Season module
 advanceSeasonGameDataFrame :: SeasonRef -> Handler Html
 advanceSeasonGameDataFrame seasonRef = do
-  seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  -- For this demo, we'll create a fresh game each time and advance it a few times
-  -- In a real implementation, we'd want to track the current game state
-  maybeGameState <- liftIO $ runStartNextGame seasonRef
+  -- Advance the current game by one step, maintaining all game state including pitch log
+  maybeGameState <- liftIO $ runAdvanceCurrentGame seasonRef
   case maybeGameState of
-    Nothing -> return $ seasonPageToHtml seasonState
-    Just initialGameState -> do
-      if isGameOver initialGameState
+    Nothing -> do
+      -- No current game, return season page
+      seasonState <- liftIO $ getCurrentSeasonState seasonRef
+      return $ seasonPageToHtml seasonState
+    Just gameState -> do
+      if isGameOver gameState
         then do
-          -- Record the game result and return season page
-          liftIO $ runRecordGameResult seasonRef initialGameState
+          -- Game finished, record result and return season page
+          liftIO $ runRecordGameResult seasonRef gameState
           updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
           return $ seasonPageToHtml updatedSeasonState
         else do
-          -- Advance the game by one step
-          gameRef <- liftIO $ newIORef initialGameState
-          (_, newGameState) <- liftIO $ advanceGameState gameRef
-          if isGameOver newGameState
-            then do
-              -- Game finished, record result
-              liftIO $ runRecordGameResult seasonRef newGameState
-              updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
-              return $ seasonPageToHtml updatedSeasonState
-            else do
-              -- Game still ongoing, return game frame
-              return $ autoAdvancingGameFrameHtml newGameState
+          -- Game still ongoing, return game frame with preserved state
+          return $ autoAdvancingGameFrameHtml gameState
 
 -- Finish season game handler
 finishSeasonGameHandler :: SeasonRef -> Handler Html
