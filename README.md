@@ -6,7 +6,6 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 - [ ] Create an architectural diagram.
 - [ ] Rename the project to baseball card game? I was thinking "Waxball".
-      Or something. Or do we stick with the dice theme and try to keep that involved.
 
 ### Game
 
@@ -22,7 +21,7 @@ Each Game module should live in `src/Game/`.
 ### UI
 
 - [ ] HTMX web app.
-- [ ] Card design.
+- [ ] Card design. What JavaScript libraries can be used for this?
 
 ### Misc
 
@@ -33,4 +32,5 @@ Each Game module should live in `src/Game/`.
 
 - [ ] HTMX Web App.
 - [ ] Cloud hosted.
-- [ ] Authentication / user base
+- [ ] Authentication / user base.
+- [ ] SQLite for persistence.
