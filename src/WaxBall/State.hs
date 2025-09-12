@@ -1,7 +1,6 @@
 module WaxBall.State
   ( GameRef,
     advanceGameState,
-    getCurrentGameState,
   )
 where
 
@@ -28,7 +27,3 @@ advanceGameState gameRef = do
       currentState
   writeIORef gameRef newState
   return (strikeAction, newState)
-
--- Get current game state (read-only)
-getCurrentGameState :: GameRef -> IO GameState
-getCurrentGameState = readIORef
