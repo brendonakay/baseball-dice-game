@@ -11,10 +11,10 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 Each Game module should live in `src/Game/`.
 
+- [ ] Authentication
+- [ ] Authorization
 - [ ] League
-- [ ] Season
-- [ ] Cards
-- [ ] Logic
+- [ ] Game
   - Errors
   - Pitching
 

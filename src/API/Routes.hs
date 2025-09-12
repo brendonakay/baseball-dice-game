@@ -3,16 +3,29 @@
 
 module API.Routes where
 
-import API.Handlers (advanceSeasonGameDataFrame, finishSeasonGameHandler, nextSeasonGameHandler, seasonConfigPageHandler, seasonPageHandler, startNewSeasonHandler, startSeasonGameHandler, updateSeasonPlayerHandler)
+import API.Handlers
+  ( advanceSeasonGameDataFrame,
+    finishSeasonGameHandler,
+    nextSeasonGameHandler,
+    rootPageHandler,
+    seasonConfigPageHandler,
+    startNewSeasonHandler,
+    startSeasonGameHandler,
+    updateSeasonPlayerHandler,
+    userPageHandler,
+  )
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
+import User.Account (UserRef)
 import WaxBall.Season (SeasonRef)
 
 -- API type definition for season-based flow
 type API =
   -- / (main season page)
   Get '[HTML] Html
+    -- /user (user dashboard page)
+    :<|> "user" :> Get '[HTML] Html
     -- /start-season (start a new 10-game season)
     :<|> "start-season" :> Post '[HTML] Html
     -- /season-config (team configuration page for current season)
@@ -21,7 +34,7 @@ type API =
     :<|> "start-game" :> Post '[HTML] Html
     -- /game-data (auto-advances current game state)
     :<|> "game-data" :> Get '[HTML] Html
-    -- /finish-game (called when game is complete, returns to season page)
+    -- /finish-game (called when game is complete, returns to user page)
     :<|> "finish-game" :> Post '[HTML] Html
     -- /next-game (starts the next game in the season)
     :<|> "next-game" :> Post '[HTML] Html
@@ -29,17 +42,18 @@ type API =
     :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
 
 -- Implement the server handlers
-server :: SeasonRef -> Server API
-server seasonRef =
-  seasonPageHandler seasonRef
+server :: UserRef -> SeasonRef -> Server API
+server userRef seasonRef =
+  rootPageHandler seasonRef
+    :<|> userPageHandler userRef seasonRef
     :<|> startNewSeasonHandler seasonRef
     :<|> seasonConfigPageHandler seasonRef
     :<|> startSeasonGameHandler seasonRef
-    :<|> advanceSeasonGameDataFrame seasonRef
-    :<|> finishSeasonGameHandler seasonRef
+    :<|> advanceSeasonGameDataFrame userRef seasonRef
+    :<|> finishSeasonGameHandler userRef seasonRef
     :<|> nextSeasonGameHandler seasonRef
     :<|> updateSeasonPlayerHandler seasonRef
 
--- Create the application with season state
-app :: SeasonRef -> Application
-app seasonRef = serve (Proxy :: Proxy API) (server seasonRef)
+-- Create the application with user and season state
+app :: UserRef -> SeasonRef -> Application
+app userRef seasonRef = serve (Proxy :: Proxy API) (server userRef seasonRef)

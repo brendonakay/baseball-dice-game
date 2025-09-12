@@ -1,19 +1,34 @@
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.IORef (writeIORef)
+import Data.IORef (readIORef, writeIORef)
 import Servant
 import Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 import Text.Read (readMaybe)
+import User.Account (User (..), UserRef)
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
+import View.User (userPageToHtml)
+import WaxBall.Card (Card (..))
 import WaxBall.Game (GameState (..), Player (..), isGameOver)
 import WaxBall.Season (SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 
--- Season page handler - main landing page
-seasonPageHandler :: SeasonRef -> Handler Html
-seasonPageHandler seasonRef = do
+-- Root page handler - redirects to user dashboard
+rootPageHandler :: SeasonRef -> Handler Html
+rootPageHandler _ = do
+  return $ H.docTypeHtml $ do
+    H.head $ do
+      H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/user")
+      H.title $ H.toHtml "Redirecting..."
+    H.body $ do
+      H.p $ H.toHtml "Redirecting to dashboard..."
+
+-- User page handler - user dashboard with season info
+userPageHandler :: UserRef -> SeasonRef -> Handler Html
+userPageHandler userRef seasonRef = do
+  user <- liftIO $ readIORef userRef
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ seasonPageToHtml seasonState
+  return $ userPageToHtml user seasonState
 
 -- Start new season handler
 startNewSeasonHandler :: SeasonRef -> Handler Html
@@ -67,31 +82,34 @@ startSeasonGameHandler seasonRef = do
 
 -- Auto-advance season game data frame
 -- Uses the persistent game state tracking in Season module
-advanceSeasonGameDataFrame :: SeasonRef -> Handler Html
-advanceSeasonGameDataFrame seasonRef = do
+advanceSeasonGameDataFrame :: UserRef -> SeasonRef -> Handler Html
+advanceSeasonGameDataFrame userRef seasonRef = do
   -- Advance the current game by one step, maintaining all game state including pitch log
   maybeGameState <- liftIO $ runAdvanceCurrentGame seasonRef
   case maybeGameState of
     Nothing -> do
-      -- No current game, return season page
+      -- No current game, redirect to user dashboard
+      user <- liftIO $ readIORef userRef
       seasonState <- liftIO $ getCurrentSeasonState seasonRef
-      return $ seasonPageToHtml seasonState
+      return $ userPageToHtml user seasonState
     Just gameState -> do
       if isGameOver gameState
         then do
-          -- Game finished, record result and return season page
+          -- Game finished, record result and redirect to user dashboard
           liftIO $ runRecordGameResult seasonRef gameState
+          user <- liftIO $ readIORef userRef
           updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
-          return $ seasonPageToHtml updatedSeasonState
+          return $ userPageToHtml user updatedSeasonState
         else do
           -- Game still ongoing, return game frame with preserved state
           return $ autoAdvancingGameFrameHtml gameState
 
--- Finish season game handler
-finishSeasonGameHandler :: SeasonRef -> Handler Html
-finishSeasonGameHandler seasonRef = do
+-- Finish season game handler - redirects to user page
+finishSeasonGameHandler :: UserRef -> SeasonRef -> Handler Html
+finishSeasonGameHandler userRef seasonRef = do
+  user <- liftIO $ readIORef userRef
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ seasonPageToHtml seasonState
+  return $ userPageToHtml user seasonState
 
 -- Next season game handler
 nextSeasonGameHandler :: SeasonRef -> Handler Html

@@ -34,9 +34,9 @@ gameContainerHtml gs = H.div ! A.id (stringValue "game-container") $ do
     else H.div ! A.style (stringValue "text-align: center; margin: 20px;") $ do
       H.p ! A.style (stringValue "font-size: 1.2em; color: #2c3e50;") $ H.toHtml "Game Complete!"
       H.button
-        ! A.onclick (stringValue "window.location.href='/'")
+        ! A.onclick (stringValue "window.location.href='/user'")
         ! A.style (stringValue "padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px;")
-        $ H.toHtml "Start New Game"
+        $ H.toHtml "Return to Dashboard"
   gameFrameHtml gs
 
 -- Complete game page with header, button, and styling
@@ -488,7 +488,7 @@ autoAdvancingGameContainerHtml gs = H.div ! A.id (stringValue "game-container") 
           $ H.button
             ! A.type_ (stringValue "submit")
             ! A.style (stringValue "padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px;")
-          $ H.toHtml "Return to Season"
+          $ H.toHtml "Return to Dashboard"
   gameFrameHtml gs
 
 -- Auto-advancing game frame (just the game frame, not the container)
