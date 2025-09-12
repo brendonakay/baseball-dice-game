@@ -1,4 +1,4 @@
-module Game.Dice
+module WaxBall.Dice
   ( rollDiceNTimes,
   )
 where

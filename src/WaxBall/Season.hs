@@ -1,11 +1,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- This module contains Season logic for managing a 10-game season.
--- Follows the same patterns as Game.Logic with StateT monad usage.
+-- Follows the same patterns as WaxBall.Game with StateT monad usage.
 
-module Game.Season
+module WaxBall.Season
   ( SeasonState (..),
     GameResult (..),
     SeasonRef,
@@ -29,10 +28,10 @@ import Control.Monad.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.IORef
 import GHC.Generics (Generic)
-import Game.Logic (AwayTeam, GameState (..), HomeTeam, initialGameState, newGameState)
-import qualified Game.State as GS (advanceGameState)
+import WaxBall.Game (AwayTeam, GameState (..), HomeTeam, initialGameState, newGameState)
+import qualified WaxBall.State as GS (advanceGameState)
 
--- State Transformer for Season logic (following Game.Logic pattern)
+-- State Transformer for Season logic (following WaxBall.Game pattern)
 type Season = StateT SeasonState IO
 
 -- Union type for winning team
@@ -162,7 +161,7 @@ getSeasonStats seasonState =
     length (gameResults seasonState)
   )
 
--- Wrapper functions for IORef integration (following Game.State pattern)
+-- Wrapper functions for IORef integration (following WaxBall.State pattern)
 runStartNextGame :: SeasonRef -> IO (Maybe GameState)
 runStartNextGame seasonRef = do
   currentState <- readIORef seasonRef
@@ -182,9 +181,9 @@ advanceCurrentGame = do
   seasonState <- get
   case currentGameState seasonState of
     Nothing -> return Nothing -- No current game
-    Just gameState -> do
-      -- Advance the game by one step using Game.State functionality
-      gameRef <- liftIO $ newIORef gameState
+    Just gameState' -> do
+      -- Advance the game by one step using WaxBall.State functionality
+      gameRef <- liftIO $ newIORef gameState'
       (_, advancedGameState) <- liftIO $ GS.advanceGameState gameRef
       -- Update the season state with the advanced game
       put $ seasonState {currentGameState = Just advancedGameState}

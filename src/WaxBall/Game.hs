@@ -6,7 +6,7 @@
 -- Run functions, prefixed with "run", are used in Control.Monad.State
 -- runState functions.
 
-module Game.Logic
+module WaxBall.Game
   ( initialGameState,
     newGameState,
     pitchBallOrStrike,

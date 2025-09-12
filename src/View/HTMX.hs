@@ -2,7 +2,11 @@ module View.HTMX where
 
 import qualified Data.List as List
 import Data.Maybe (fromMaybe, isJust)
-import Game.Logic
+import Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
+import Text.Blaze.Htmx as Htmx
+import Text.Read (readMaybe)
+import WaxBall.Game
   ( BasesState (..),
     GameState (..),
     Log (..),
@@ -10,11 +14,7 @@ import Game.Logic
     StrikeAction (..),
     isGameOver,
   )
-import Game.Season (GameResult (..), SeasonState (..), TeamStats (..))
-import Text.Blaze.Html5 as H
-import qualified Text.Blaze.Html5.Attributes as A
-import Text.Blaze.Htmx as Htmx
-import Text.Read (readMaybe)
+import WaxBall.Season (GameResult (..), SeasonState (..), TeamStats (..))
 
 -- Convert GameState to game frame for HTMX updates (preserves button container)
 gameStateToHtml :: GameState -> Html
@@ -95,7 +95,7 @@ gameFrameHtml gs = H.div ! A.id (stringValue "game-frame") ! A.class_ (stringVal
       -- Current Batter Info
       H.div ! A.class_ (stringValue "batter-info") $ do
         H.h3 (H.toHtml "Current Batter")
-        H.p $ H.toHtml $ maybe "None" (\player -> Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")") $ currentBatter gs
+        H.p $ H.toHtml $ maybe "None" (\player -> WaxBall.Game.name player ++ " (#" ++ show (WaxBall.Game.number player) ++ ")") $ currentBatter gs
 
       -- Count Display
       H.div ! A.class_ (stringValue "count") $ do
@@ -124,7 +124,7 @@ renderLogEntry logEntry =
   H.div ! A.class_ (stringValue "log-entry") ! A.style (stringValue "padding: 10px; border-bottom: 1px solid #ecf0f1; background: #f8f9fa;") $ do
     H.div ! A.style (stringValue "display: flex; justify-content: space-between; align-items: center;") $ do
       H.div ! A.style (stringValue "font-weight: bold; color: #2c3e50;") $ do
-        H.toHtml $ maybe "Unknown Batter" (\player -> Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")") (currentBatter_ logEntry)
+        H.toHtml $ maybe "Unknown Batter" (\player -> WaxBall.Game.name player ++ " (#" ++ show (WaxBall.Game.number player) ++ ")") (currentBatter_ logEntry)
         H.span ! A.style (stringValue "margin-left: 10px; font-weight: normal; color: #7f8c8d;") $
           H.toHtml $
             "Inning " ++ show (inning_ logEntry) ++ " - " ++ show (halfInning_ logEntry)
@@ -178,8 +178,8 @@ updatePlayerAtIndex :: [Player] -> Int -> Maybe String -> Maybe Int -> Maybe Dou
 updatePlayerAtIndex players idx mName mNumber mBattingAvg mSlugging =
   let updatePlayer player =
         player
-          { name = Data.Maybe.fromMaybe (Game.Logic.name player) mName,
-            number = fromMaybe (Game.Logic.number player) mNumber,
+          { name = Data.Maybe.fromMaybe (WaxBall.Game.name player) mName,
+            number = fromMaybe (WaxBall.Game.number player) mNumber,
             battingAverage = maybe (battingAverage player) (Prelude.max 0.150 . Prelude.min 0.400) mBattingAvg,
             sluggingPercentage = maybe (sluggingPercentage player) (Prelude.max 0.300 . Prelude.min 0.700) mSlugging
           }
@@ -214,7 +214,7 @@ configPageToHtml homeTeamPlayers awayTeamPlayers = do
 renderPlayerForm :: String -> (Int, Player) -> Html
 renderPlayerForm teamType (idx, player) = do
   H.div ! A.class_ (stringValue "player-form") ! A.id (stringValue $ "player-" ++ teamType ++ "-" ++ show idx) $ do
-    H.h3 $ H.toHtml $ Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")"
+    H.h3 $ H.toHtml $ WaxBall.Game.name player ++ " (#" ++ show (WaxBall.Game.number player) ++ ")"
     H.form
       ! Htmx.hxPost (stringValue "/update-player")
       ! Htmx.hxTarget (stringValue $ "#player-" ++ teamType ++ "-" ++ show idx)
@@ -225,11 +225,11 @@ renderPlayerForm teamType (idx, player) = do
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Name: "
-          H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ Game.Logic.name player)
+          H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ WaxBall.Game.name player)
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Number: "
-          H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ Game.Logic.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
+          H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ WaxBall.Game.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Batting Average: "
@@ -386,7 +386,10 @@ seasonPageToHtml seasonState = H.docTypeHtml $ do
                 H.h2 ! A.style (stringValue "color: #e74c3c;") $ H.toHtml "Season Complete!"
                 let homeWins = wins (homeTeamStats seasonState)
                     awayWins = wins (awayTeamStats seasonState)
-                    champion = if homeWins > awayWins then "Home" else if awayWins > homeWins then "Away" else "Tie"
+                    champion
+                      | homeWins > awayWins = "Home"
+                      | awayWins > homeWins = "Away"
+                      | otherwise = "Tie"
                 H.h3 $ H.toHtml $ "Champion: " ++ champion ++ " Team"
 
 -- Season configuration page (reuse existing config page logic)
@@ -416,7 +419,7 @@ seasonConfigPageToHtml homeTeamPlayers awayTeamPlayers = do
 renderSeasonPlayerForm :: String -> (Int, Player) -> Html
 renderSeasonPlayerForm teamType (idx, player) = do
   H.div ! A.class_ (stringValue "player-form") ! A.id (stringValue $ "player-" ++ teamType ++ "-" ++ show idx) $ do
-    H.h3 $ H.toHtml $ Game.Logic.name player ++ " (#" ++ show (Game.Logic.number player) ++ ")"
+    H.h3 $ H.toHtml $ WaxBall.Game.name player ++ " (#" ++ show (WaxBall.Game.number player) ++ ")"
     H.form
       ! Htmx.hxPost (stringValue "/update-player")
       ! Htmx.hxTarget (stringValue $ "#player-" ++ teamType ++ "-" ++ show idx)
@@ -427,11 +430,11 @@ renderSeasonPlayerForm teamType (idx, player) = do
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Name: "
-          H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ Game.Logic.name player)
+          H.input ! A.type_ (stringValue "text") ! A.name (stringValue "name") ! A.value (stringValue $ WaxBall.Game.name player)
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Number: "
-          H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ Game.Logic.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
+          H.input ! A.type_ (stringValue "number") ! A.name (stringValue "number") ! A.value (stringValue $ show $ WaxBall.Game.number player) ! A.min (stringValue "1") ! A.max (stringValue "99")
 
         H.div ! A.class_ (stringValue "form-row") $ do
           H.label $ H.toHtml "Batting Average: "
@@ -471,12 +474,12 @@ autoAdvancingGameContainerHtml gs = H.div ! A.id (stringValue "game-container") 
     then do
       H.div ! A.style (stringValue "text-align: center; margin: 20px;") $ do
         H.p ! A.style (stringValue "color: #2c3e50; font-size: 1.1em;") $ H.toHtml "Game is auto-advancing..."
-        -- Auto-refresh every 2 seconds
+        -- Auto-refresh every 0.5 second
         H.div
           ! Htmx.hxGet (stringValue "/game-data")
           ! Htmx.hxTarget (stringValue "#game-frame")
           ! Htmx.hxSwap (stringValue "outerHTML")
-          ! Htmx.hxTrigger (stringValue "every 1s")
+          ! Htmx.hxTrigger (stringValue "every 0.5s")
           $ H.toHtml ""
     else do
       H.div ! A.style (stringValue "text-align: center; margin: 20px;") $ do

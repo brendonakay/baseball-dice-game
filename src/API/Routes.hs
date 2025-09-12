@@ -4,10 +4,10 @@
 module API.Routes where
 
 import API.Handlers (advanceSeasonGameDataFrame, finishSeasonGameHandler, nextSeasonGameHandler, seasonConfigPageHandler, seasonPageHandler, startNewSeasonHandler, startSeasonGameHandler, updateSeasonPlayerHandler)
-import Game.Season (SeasonRef)
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
+import WaxBall.Season (SeasonRef)
 
 -- API type definition for season-based flow
 type API =

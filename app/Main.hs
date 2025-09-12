@@ -4,8 +4,8 @@ module Main where
 
 import qualified API.Routes as App
 import Data.IORef (newIORef)
-import Game.Season (newSeasonState)
 import Network.Wai.Handler.Warp (run)
+import WaxBall.Season (newSeasonState)
 
 main :: IO ()
 main = do

@@ -2,12 +2,12 @@ module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef (writeIORef)
-import Game.Logic (GameState (..), Player (..), isGameOver)
-import Game.Season (SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 import Servant
 import Text.Blaze.Html5 as H
 import Text.Read (readMaybe)
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
+import WaxBall.Game (GameState (..), Player (..), isGameOver)
+import WaxBall.Season (SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 
 -- Season page handler - main landing page
 seasonPageHandler :: SeasonRef -> Handler Html
@@ -18,7 +18,7 @@ seasonPageHandler seasonRef = do
 -- Start new season handler
 startNewSeasonHandler :: SeasonRef -> Handler Html
 startNewSeasonHandler seasonRef = do
-  -- Create default teams (reusing logic from Game.State)
+  -- Create default teams (reusing logic from WaxBall.State)
   let homeTeam =
         [ Player "Home A" 1 0.285 0.350 0.450,
           Player "Home B" 2 0.312 0.380 0.520,

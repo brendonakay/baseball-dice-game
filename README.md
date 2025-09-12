@@ -26,7 +26,7 @@ Each Game module should live in `src/Game/`.
 ### Misc
 
 - [ ] Hot reloading.
-- [ ] Use lenses for game state operations.
+- [ ] Use lenses for game state operations?
 
 ## Architectural Roadmap
 
@@ -34,3 +34,18 @@ Each Game module should live in `src/Game/`.
 - [ ] Cloud hosted.
 - [ ] Authentication / user base.
 - [ ] SQLite for persistence.
+
+## User Flow
+
+1. User logs in.
+2. User is brought to their landing page.
+3. The landing page displays:
+
+   - Team info
+   - Season info
+   - Card inventory
+   - Schedule
+   - Market, TBD
+
+4. The landing page links to detailed views of the various components
+   listed.
