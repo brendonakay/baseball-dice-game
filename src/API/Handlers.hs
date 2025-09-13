@@ -6,12 +6,11 @@ import Servant
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Read (readMaybe)
-import User.Account (User (..), UserRef)
-import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
+import User.Account (UserRef)
+import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
 import View.User (userPageToHtml)
-import WaxBall.Card (Card (..))
-import WaxBall.Game (GameState (..), Player (..), isGameOver)
-import WaxBall.Season (SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
+import WaxBall.Game (Player (..), isGameOver)
+import WaxBall.Season (GameResult (..), SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 
 -- Root page handler - redirects to user dashboard
 rootPageHandler :: SeasonRef -> Handler Html
@@ -88,28 +87,25 @@ advanceSeasonGameDataFrame userRef seasonRef = do
   maybeGameState <- liftIO $ runAdvanceCurrentGame seasonRef
   case maybeGameState of
     Nothing -> do
-      -- No current game, redirect to user dashboard
-      user <- liftIO $ readIORef userRef
+      -- No current game, show game completion with stats from most recent game
       seasonState <- liftIO $ getCurrentSeasonState seasonRef
-      return $ userPageToHtml user seasonState
+      case gameResults seasonState of
+        [] -> do
+          -- No games completed yet, fallback to user page
+          user <- liftIO $ readIORef userRef
+          return $ userPageToHtml user seasonState
+        (mostRecent : _) -> do
+          -- Use the most recent completed game state to show completion screen
+          return $ gameCompletionHtml (gameState mostRecent)
     Just gameState -> do
       if isGameOver gameState
         then do
-          -- Game finished, record result and redirect to user dashboard
+          -- Game finished, record result and return completion view
           liftIO $ runRecordGameResult seasonRef gameState
-          user <- liftIO $ readIORef userRef
-          updatedSeasonState <- liftIO $ getCurrentSeasonState seasonRef
-          return $ userPageToHtml user updatedSeasonState
+          return $ gameCompletionHtml gameState
         else do
           -- Game still ongoing, return game frame with preserved state
           return $ autoAdvancingGameFrameHtml gameState
-
--- Finish season game handler - redirects to user page
-finishSeasonGameHandler :: UserRef -> SeasonRef -> Handler Html
-finishSeasonGameHandler userRef seasonRef = do
-  user <- liftIO $ readIORef userRef
-  seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ userPageToHtml user seasonState
 
 -- Next season game handler
 nextSeasonGameHandler :: SeasonRef -> Handler Html

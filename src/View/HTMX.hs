@@ -483,12 +483,9 @@ autoAdvancingGameContainerHtml gs = H.div ! A.id (stringValue "game-container") 
           $ H.toHtml ""
     else do
       H.div ! A.style (stringValue "text-align: center; margin: 20px;") $ do
-        H.p ! A.style (stringValue "font-size: 1.2em; color: #2c3e50;") $ H.toHtml "Game Complete!"
-        H.form ! A.action (stringValue "/finish-game") ! A.method (stringValue "post")
-          $ H.button
-            ! A.type_ (stringValue "submit")
-            ! A.style (stringValue "padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px;")
-          $ H.toHtml "Return to Dashboard"
+        H.p ! A.style (stringValue "font-size: 1.2em; color: #2c3e50;") $ H.toHtml "Game Complete! Redirecting..."
+        -- Auto-redirect to user page after game completion using JavaScript
+        H.script $ H.toHtml "setTimeout(function() { window.location.href = '/user'; }, 1000);"
   gameFrameHtml gs
 
 -- Auto-advancing game frame (just the game frame, not the container)
@@ -514,6 +511,33 @@ renderGameResult result =
 -- Helper function for unless
 unless :: Bool -> Html -> Html
 unless condition htmlContent = if condition then H.toHtml "" else htmlContent
+
+-- Game completion view with auto-redirect
+gameCompletionHtml :: GameState -> Html
+gameCompletionHtml gs =
+  H.div ! A.id (stringValue "game-frame") ! A.class_ (stringValue "game-frame") $ do
+    H.div ! A.style (stringValue "text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);") $ do
+      H.h2 ! A.style (stringValue "color: #27ae60; font-size: 2.5em; margin-bottom: 20px;") $ H.toHtml "Game Complete!"
+
+      -- Display final score
+      let finalHomeScore = homeScore gs
+          finalAwayScore = awayScore gs
+          winner = if finalHomeScore > finalAwayScore then "Home" else "Away"
+
+      H.div ! A.style (stringValue "font-size: 1.5em; margin: 20px 0; color: #2c3e50;") $ do
+        H.strong $ H.toHtml $ winner ++ " Team Wins!"
+
+      H.div ! A.style (stringValue "font-size: 1.3em; margin: 20px 0; color: #34495e;") $ do
+        H.toHtml $ "Final Score: Away " ++ show finalAwayScore ++ " - Home " ++ show finalHomeScore
+
+      H.div ! A.style (stringValue "font-size: 1.1em; margin: 20px 0; color: #7f8c8d;") $ do
+        H.toHtml $ "Innings Played: " ++ show (inning gs)
+
+      H.p ! A.style (stringValue "font-size: 1.1em; color: #95a5a6; margin-top: 30px;") $
+        H.toHtml "Redirecting to dashboard in 2 seconds..."
+
+      -- JavaScript redirect after 2 seconds
+      H.script $ H.toHtml "setTimeout(function() { window.location.href = '/user'; }, 2000);"
 
 -- CSS for season page
 seasonPageCSS :: String

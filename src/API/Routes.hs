@@ -5,7 +5,6 @@ module API.Routes where
 
 import API.Handlers
   ( advanceSeasonGameDataFrame,
-    finishSeasonGameHandler,
     nextSeasonGameHandler,
     rootPageHandler,
     seasonConfigPageHandler,
@@ -34,8 +33,6 @@ type API =
     :<|> "start-game" :> Post '[HTML] Html
     -- /game-data (auto-advances current game state)
     :<|> "game-data" :> Get '[HTML] Html
-    -- /finish-game (called when game is complete, returns to user page)
-    :<|> "finish-game" :> Post '[HTML] Html
     -- /next-game (starts the next game in the season)
     :<|> "next-game" :> Post '[HTML] Html
     -- /update-player (updates a single player in season)
@@ -50,7 +47,6 @@ server userRef seasonRef =
     :<|> seasonConfigPageHandler seasonRef
     :<|> startSeasonGameHandler seasonRef
     :<|> advanceSeasonGameDataFrame userRef seasonRef
-    :<|> finishSeasonGameHandler userRef seasonRef
     :<|> nextSeasonGameHandler seasonRef
     :<|> updateSeasonPlayerHandler seasonRef
 
