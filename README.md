@@ -11,6 +11,8 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 Each Game module should live in `src/Game/`.
 
+- [ ] Card logic.
+- [ ] Simulator. Something to simulate entire seasons/games.
 - [ ] Authentication
 - [ ] Authorization
 - [ ] League
