@@ -12,7 +12,7 @@ data User = User
   { userId :: Int,
     userName :: String,
     userEmail :: String,
-    cards :: [Card]
+    personalCollection :: [Card]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

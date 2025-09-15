@@ -6,6 +6,7 @@ module API.Routes where
 import API.Handlers
   ( advanceSeasonGameDataFrame,
     nextSeasonGameHandler,
+    personalCollectionPageHandler,
     rootPageHandler,
     seasonConfigPageHandler,
     startNewSeasonHandler,
@@ -23,8 +24,12 @@ import WaxBall.Season (SeasonRef)
 type API =
   -- / (main season page)
   Get '[HTML] Html
+    -- Pages
     -- /user (user dashboard page)
     :<|> "user" :> Get '[HTML] Html
+    :<|> "personal-collection" :> Get '[HTML] Html
+    --
+    -- Containers & Data
     -- /start-season (start a new 10-game season)
     :<|> "start-season" :> Post '[HTML] Html
     -- /season-config (team configuration page for current season)
@@ -43,6 +48,7 @@ server :: UserRef -> SeasonRef -> Server API
 server userRef seasonRef =
   rootPageHandler seasonRef
     :<|> userPageHandler userRef seasonRef
+    :<|> personalCollectionPageHandler userRef seasonRef
     :<|> startNewSeasonHandler seasonRef
     :<|> seasonConfigPageHandler seasonRef
     :<|> startSeasonGameHandler seasonRef

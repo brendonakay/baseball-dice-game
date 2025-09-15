@@ -8,6 +8,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Text.Read (readMaybe)
 import User.Account (UserRef)
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
+import View.PersonalCollection (personalCollectionPageToHtml)
 import View.User (userPageToHtml)
 import WaxBall.Game (Player (..), isGameOver)
 import WaxBall.Season (GameResult (..), SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
@@ -28,6 +29,12 @@ userPageHandler userRef seasonRef = do
   user <- liftIO $ readIORef userRef
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
   return $ userPageToHtml user seasonState
+
+-- Personal collection page handler - displays user's card collection
+personalCollectionPageHandler :: UserRef -> SeasonRef -> Handler Html
+personalCollectionPageHandler userRef _ = do
+  user <- liftIO $ readIORef userRef
+  return $ personalCollectionPageToHtml user
 
 -- Start new season handler
 startNewSeasonHandler :: SeasonRef -> Handler Html

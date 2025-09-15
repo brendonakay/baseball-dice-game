@@ -7,12 +7,19 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 - [ ] Create an architectural diagram.
 - [ ] Rename the project to baseball card game? I was thinking "Waxball".
 
+### App
+
+- [ ] App context. Gets initialized in `main`.
+- [ ] Logging and debug.
+- [ ] Multi-User
+
 ### Game
 
 Each Game module should live in `src/Game/`.
 
-- [ ] Card logic.
-- [ ] Simulator. Something to simulate entire seasons/games.
+- [ ] Card logic
+- [ ] Roster
+- [ ] Simulator Something to simulate entire seasons/games
 - [ ] Authentication
 - [ ] Authorization
 - [ ] League
@@ -22,8 +29,17 @@ Each Game module should live in `src/Game/`.
 
 ### UI
 
-- [ ] HTMX web app.
+- [ ] Convert the user dashboard into a banner. This should show up on
+      all views. Maybe just do HTMX Gets in a div for detail views of banner
+      items.
 - [ ] Card design. What JavaScript libraries can be used for this?
+- [ ] Break out CSS and JS into their own files.
+
+### API
+
+- [ ] Modularize the API. Break it down so it's not one overloaded Routes
+      file.
+- [ ] Leverage cool Servant features. API docs?
 
 ### Misc
 

@@ -32,8 +32,10 @@ userPageToHtml user seasonState = H.docTypeHtml $ do
             H.strong $ H.toHtml "User ID: "
             H.span $ H.toHtml $ show $ userId user
           H.div ! A.class_ (stringValue "info-item") $ do
-            H.strong $ H.toHtml "Cards: "
-            H.span $ H.toHtml $ show $ length $ cards user
+            H.strong $ H.toHtml "Personal Collection: "
+            H.span $ H.toHtml $ show $ length $ personalCollection user
+            H.span $ H.toHtml " cards "
+            H.a ! A.href (stringValue "/personal-collection") ! A.style (stringValue "text-decoration: none; color: #3498db;") $ H.toHtml "[View Collection]"
 
       -- Season Information Section
       H.div ! A.class_ (stringValue "season-info") $ do

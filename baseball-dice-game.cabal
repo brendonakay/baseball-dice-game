@@ -70,6 +70,7 @@ executable baseball-dice-game
                     , WaxBall.Season
                     , View.HTMX
                     , View.User
+                    , View.PersonalCollection
                     , API.Routes
                     , API.Handlers
                     , User.Account
