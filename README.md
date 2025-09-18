@@ -67,3 +67,18 @@ Each Game module should live in `src/Game/`.
 
 4. The landing page links to detailed views of the various components
    listed.
+
+## Scripts
+
+### Database Initialization
+
+Initialize a new SQLite database with a users table:
+
+```bash
+cabal run init-db -- app.db
+```
+
+This creates a database file with a `users` table containing:
+- `userID` (INTEGER PRIMARY KEY AUTOINCREMENT)
+- `password` (TEXT NOT NULL)
+- `created_at` (DATETIME DEFAULT CURRENT_TIMESTAMP)

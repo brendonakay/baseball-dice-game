@@ -17,7 +17,7 @@ import API.Handlers
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
-import User.Account (UserRef)
+import User.AuthenticatedUser (UserRef)
 import WaxBall.Season (SeasonRef)
 
 -- API type definition for season-based flow

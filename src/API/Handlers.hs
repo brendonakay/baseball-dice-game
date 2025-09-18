@@ -6,7 +6,7 @@ import Servant
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Read (readMaybe)
-import User.Account (UserRef)
+import User.AuthenticatedUser (UserRef)
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
 import View.PersonalCollection (personalCollectionPageToHtml)
 import View.User (userPageToHtml)

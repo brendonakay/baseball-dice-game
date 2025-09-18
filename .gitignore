@@ -2,3 +2,6 @@ dist-*
 *.png
 .direnv
 .ghc*
+
+# App related
+app.db

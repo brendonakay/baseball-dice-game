@@ -3,10 +3,10 @@ module View.User where
 import Control.Monad (unless)
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import User.Account (User (..))
+import User.AuthenticatedUser (AuthenticatedUser (..))
 import WaxBall.Season (GameResult (..), SeasonState (..), TeamStats (..))
 
-userPageToHtml :: User -> SeasonState -> Html
+userPageToHtml :: AuthenticatedUser -> SeasonState -> Html
 userPageToHtml user seasonState = H.docTypeHtml $ do
   H.head $ do
     H.meta ! A.charset (stringValue "UTF-8")
@@ -24,13 +24,13 @@ userPageToHtml user seasonState = H.docTypeHtml $ do
         H.div ! A.class_ (stringValue "info-grid") $ do
           H.div ! A.class_ (stringValue "info-item") $ do
             H.strong $ H.toHtml "Name: "
-            H.span $ H.toHtml $ userName user
+            H.span $ H.toHtml $ name user
           H.div ! A.class_ (stringValue "info-item") $ do
             H.strong $ H.toHtml "Email: "
-            H.span $ H.toHtml $ userEmail user
+            H.span $ H.toHtml $ email user
           H.div ! A.class_ (stringValue "info-item") $ do
             H.strong $ H.toHtml "User ID: "
-            H.span $ H.toHtml $ show $ userId user
+            H.span $ H.toHtml $ show $ auId user
           H.div ! A.class_ (stringValue "info-item") $ do
             H.strong $ H.toHtml "Personal Collection: "
             H.span $ H.toHtml $ show $ length $ personalCollection user
@@ -141,7 +141,7 @@ renderGameSummary result =
 
 -- Printf helper for formatting percentages
 printf :: String -> Double -> String
-printf fmt val = formatDouble fmt val
+printf = formatDouble
   where
     formatDouble "%.1f%%" d = show (round (d * 10) `Prelude.div` 10) ++ "." ++ show (round (d * 10) `Prelude.mod` 10) ++ "%"
     formatDouble _ d = show d

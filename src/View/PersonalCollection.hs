@@ -2,11 +2,11 @@ module View.PersonalCollection where
 
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import User.Account (User (..))
-import WaxBall.Card (Card (..))
-import WaxBall.Game (Player (..))
+import User.AuthenticatedUser as AU
+import WaxBall.Card as C
+import WaxBall.Game as G
 
-personalCollectionPageToHtml :: User -> Html
+personalCollectionPageToHtml :: AuthenticatedUser -> Html
 personalCollectionPageToHtml user = H.docTypeHtml $ do
   H.head $ do
     H.meta ! A.charset (stringValue "UTF-8")
@@ -26,7 +26,7 @@ personalCollectionPageToHtml user = H.docTypeHtml $ do
           H.p ! A.class_ (stringValue "stat-value") $ H.toHtml $ show $ length $ personalCollection user
         H.div ! A.class_ (stringValue "stat-card") $ do
           H.h3 $ H.toHtml "Collection Owner"
-          H.p ! A.class_ (stringValue "stat-value") $ H.toHtml $ userName user
+          H.p ! A.class_ (stringValue "stat-value") $ H.toHtml $ AU.name user
 
       H.div ! A.class_ (stringValue "cards-grid") $ do
         mapM_ renderCard (personalCollection user)
@@ -34,10 +34,10 @@ personalCollectionPageToHtml user = H.docTypeHtml $ do
 renderCard :: Card -> Html
 renderCard card = H.div ! A.class_ (stringValue "card") $ do
   H.div ! A.class_ (stringValue "card-header") $ do
-    H.span ! A.class_ (stringValue "card-number") $ H.toHtml $ WaxBall.Card.number card
-    H.span ! A.class_ (stringValue "jersey-number") $ H.toHtml $ "#" ++ show (WaxBall.Game.number (player card))
+    H.span ! A.class_ (stringValue "card-number") $ H.toHtml $ C.number card
+    H.span ! A.class_ (stringValue "jersey-number") $ H.toHtml $ "#" ++ show (G.number (player card))
   H.div ! A.class_ (stringValue "card-body") $ do
-    H.h3 ! A.class_ (stringValue "player-name") $ H.toHtml $ name (player card)
+    H.h3 ! A.class_ (stringValue "player-name") $ H.toHtml $ G.name (player card)
     H.div ! A.class_ (stringValue "stats") $ do
       H.div ! A.class_ (stringValue "stat") $ do
         H.span ! A.class_ (stringValue "stat-label") $ H.toHtml "AVG"

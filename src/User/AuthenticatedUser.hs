@@ -1,20 +1,20 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module User.Account where
+module User.AuthenticatedUser where
 
 import Data.Aeson
 import Data.IORef
 import GHC.Generics
 import WaxBall.Card (Card)
 
-data User = User
-  { userId :: Int,
-    userName :: String,
-    userEmail :: String,
+data AuthenticatedUser = User
+  { auId :: Int,
+    name :: String,
+    email :: String,
     personalCollection :: [Card]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Reference type for thread-safe user state management
-type UserRef = IORef User
+type UserRef = IORef AuthenticatedUser

@@ -5,7 +5,7 @@ module Main where
 import qualified API.Routes as App
 import Data.IORef (newIORef)
 import Network.Wai.Handler.Warp (run)
-import User.Account (User (..), UserRef)
+import User.AuthenticatedUser (User (..))
 import WaxBall.Card (Card (..))
 import WaxBall.Game (Player (..))
 import WaxBall.Season (newSeasonState)
@@ -25,7 +25,7 @@ main = do
           Player "Henry Davis" 8 0.258 0.330 0.425,
           Player "Ivan Rodriguez" 9 0.278 0.345 0.470
         ]
-      defaultCards = zipWith (\i player -> Card i ("CARD-00" ++ show i) player) [1 .. 9] samplePlayers
+      defaultCards = zipWith (\i player' -> Card i ("CARD-00" ++ show i) player') [1 .. 9] samplePlayers
       defaultUser = User 1 "Baseball Fan" "fan@baseball.com" defaultCards
   userRef <- newIORef defaultUser
   putStrLn "User initialized!"
