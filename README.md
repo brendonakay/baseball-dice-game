@@ -9,15 +9,16 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ### App
 
-- [ ] App context. Gets initialized in `main`.
-- [ ] Logging and debug.
-- [ ] Multi-User
+- [ ] App context. Gets initialized in `main`
+- [ ] Logging and debug
+- [ ] Better Auth
 
 ### Game
 
-Each Game module should live in `src/Game/`.
+Each Game module should live in `src/Game/`
 
 - [ ] Card logic
+  - Rip wax
 - [ ] Roster
 - [ ] Simulator Something to simulate entire seasons/games
 - [ ] Authentication
@@ -43,7 +44,7 @@ Each Game module should live in `src/Game/`.
 
 ### Misc
 
-- [ ] Hot reloading.
+- [ ] Hot reloading. GHCid?
 - [ ] Use lenses for game state operations?
 
 ## Architectural Roadmap
@@ -79,6 +80,7 @@ cabal run init-db -- app.db
 ```
 
 This creates a database file with a `users` table containing:
+
 - `userID` (INTEGER PRIMARY KEY AUTOINCREMENT)
 - `password` (TEXT NOT NULL)
 - `created_at` (DATETIME DEFAULT CURRENT_TIMESTAMP)

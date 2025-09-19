@@ -17,4 +17,4 @@ data AuthenticatedUser = User
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Reference type for thread-safe user state management
-type UserRef = IORef AuthenticatedUser
+type UserRef = IORef (Maybe AuthenticatedUser)

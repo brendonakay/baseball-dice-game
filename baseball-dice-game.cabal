@@ -62,20 +62,8 @@ executable baseball-dice-game
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
 
-executable init-db
-    -- Import common warning flags.
-    import:           warnings
-
-    -- .hs or .lhs file containing the Main module.
-    main-is:          InitDB.hs
-
-    -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.2.1
-                    , sqlite-simple
-                    , text
-
     -- Directories containing source files.
-    hs-source-dirs:   scripts
+    hs-source-dirs:   app, src
 
     -- Base language which the package is written in.
     default-language: Haskell2010
@@ -92,9 +80,7 @@ executable init-db
                     , API.Routes
                     , API.Handlers
                     , User.AuthenticatedUser
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
+                    , User.Auth
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.18.2.1
@@ -112,13 +98,34 @@ executable init-db
                     , scotty
                     , servant-server
                     , servant-blaze
+                    , servant-auth
+                    , servant-auth-server
                     , http-types
                     , warp
                     , wai
                     , sqlite-simple
+                    , cryptonite
+                    , memory
+                    , containers
+                    , base64-bytestring
+                    , cookie
+                    , jose
+                    , time
+
+executable init-db
+    -- Import common warning flags.
+    import:           warnings
+
+    -- .hs or .lhs file containing the Main module.
+    main-is:          InitDB.hs
+
+    -- Other library packages from which modules are imported.
+    build-depends:    base ^>=4.18.2.1
+                    , sqlite-simple
+                    , text
 
     -- Directories containing source files.
-    hs-source-dirs:   app, src
+    hs-source-dirs:   scripts
 
     -- Base language which the package is written in.
     default-language: Haskell2010

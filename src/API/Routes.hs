@@ -5,15 +5,19 @@ module API.Routes where
 
 import API.Handlers
   ( advanceSeasonGameDataFrame,
+    loginHandler,
+    loginPageHandler,
+    logoutHandler,
     nextSeasonGameHandler,
     personalCollectionPageHandler,
-    rootPageHandler,
+    registerHandler,
     seasonConfigPageHandler,
     startNewSeasonHandler,
     startSeasonGameHandler,
     updateSeasonPlayerHandler,
     userPageHandler,
   )
+import Database.SQLite.Simple (Connection)
 import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
@@ -22,8 +26,12 @@ import WaxBall.Season (SeasonRef)
 
 -- API type definition for season-based flow
 type API =
-  -- / (main season page)
+  -- / (login page)
   Get '[HTML] Html
+    -- Authentication
+    :<|> "login" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
+    :<|> "register" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
+    :<|> "logout" :> Post '[HTML] Html
     -- Pages
     -- /user (user dashboard page)
     :<|> "user" :> Get '[HTML] Html
@@ -44,9 +52,12 @@ type API =
     :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
 
 -- Implement the server handlers
-server :: UserRef -> SeasonRef -> Server API
-server userRef seasonRef =
-  rootPageHandler seasonRef
+server :: Connection -> UserRef -> SeasonRef -> Server API
+server dbConn userRef seasonRef =
+  loginPageHandler
+    :<|> loginHandler dbConn userRef
+    :<|> registerHandler dbConn userRef
+    :<|> logoutHandler userRef
     :<|> userPageHandler userRef seasonRef
     :<|> personalCollectionPageHandler userRef seasonRef
     :<|> startNewSeasonHandler seasonRef
@@ -56,6 +67,6 @@ server userRef seasonRef =
     :<|> nextSeasonGameHandler seasonRef
     :<|> updateSeasonPlayerHandler seasonRef
 
--- Create the application with user and season state
-app :: UserRef -> SeasonRef -> Application
-app userRef seasonRef = serve (Proxy :: Proxy API) (server userRef seasonRef)
+-- Create the application with database connection, user and season state
+app :: Connection -> UserRef -> SeasonRef -> Application
+app dbConn userRef seasonRef = serve (Proxy :: Proxy API) (server dbConn userRef seasonRef)

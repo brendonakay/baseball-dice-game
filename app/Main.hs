@@ -4,16 +4,21 @@ module Main where
 
 import qualified API.Routes as App
 import Data.IORef (newIORef)
+import Database.SQLite.Simple (open)
 import Network.Wai.Handler.Warp (run)
-import User.AuthenticatedUser (User (..))
+import User.AuthenticatedUser (AuthenticatedUser (..))
 import WaxBall.Card (Card (..))
 import WaxBall.Game (Player (..))
 import WaxBall.Season (newSeasonState)
 
 main :: IO ()
 main = do
-  -- Initialize default user
+  -- Initialize database connection
   putStrLn "=== Initializing Baseball Game ==="
+  dbConn <- open "app.db"
+  putStrLn "Database connected!"
+
+  -- Initialize default user state (will be replaced by authenticated user)
   let samplePlayers =
         [ Player "Ace Martinez" 1 0.295 0.365 0.520,
           Player "Bobby Smith" 2 0.312 0.380 0.485,
@@ -27,16 +32,16 @@ main = do
         ]
       defaultCards = zipWith (\i player' -> Card i ("CARD-00" ++ show i) player') [1 .. 9] samplePlayers
       defaultUser = User 1 "Baseball Fan" "fan@baseball.com" defaultCards
-  userRef <- newIORef defaultUser
-  putStrLn "User initialized!"
+  userRef <- newIORef (Nothing :: Maybe AuthenticatedUser) -- No user initially
+  putStrLn "User state initialized!"
 
   -- Initialize empty season state
   let emptySeasonState = newSeasonState [] [] -- Start with empty teams
   seasonRef <- newIORef emptySeasonState
   putStrLn "Season initialized and ready to start!"
 
-  -- Start web server with user and season state
+  -- Start web server with database connection, user and season state
   let port = 8080
   putStrLn $ "Starting server on port " ++ show port
-  putStrLn "Visit http://localhost:8080 to start a new season"
-  run port (App.app userRef seasonRef)
+  putStrLn "Visit http://localhost:8080 to login"
+  run port (App.app dbConn userRef seasonRef)
