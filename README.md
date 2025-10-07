@@ -12,6 +12,7 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 - [ ] App context. Gets initialized in `main`
 - [ ] Logging and debug
 - [ ] Better Auth
+- [ ] Multi-user
 
 ### Game
 
@@ -42,10 +43,16 @@ Each Game module should live in `src/Game/`
       file.
 - [ ] Leverage cool Servant features. API docs?
 
+### Database
+
+- [ ] Migrations
+
 ### Misc
 
 - [ ] Hot reloading. GHCid?
 - [ ] Use lenses for game state operations?
+- [ ] CI
+- [ ] Pre-commit hooks?
 
 ## Architectural Roadmap
 

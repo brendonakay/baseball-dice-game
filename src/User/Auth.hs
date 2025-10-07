@@ -1,10 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module User.Auth where
 
-import Control.Monad (when)
 import Crypto.Hash (Digest, SHA256, hash)
 import Data.ByteArray (convert)
 import Data.ByteString (ByteString)
@@ -13,8 +11,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.SQLite.Simple
-import Database.SQLite.Simple.FromRow
 import GHC.Generics
+import Servant.Auth.Server (BasicAuthData(..), FromBasicAuthData(..), AuthResult(..))
 import User.AuthenticatedUser (AuthenticatedUser (..))
 import WaxBall.Card (Card)
 
@@ -62,10 +60,11 @@ verifyPassword password hashedPassword = hashPassword password == hashedPassword
 createUser :: Connection -> RegisterData -> IO (Either String Int)
 createUser conn regData = do
   let hashedPwd = hashPassword (regPassword regData)
-  result <- execute
-    conn
-    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)"
-    (regUsername regData, regEmail regData, hashedPwd)
+  _ <-
+    execute
+      conn
+      "INSERT INTO users (username, email, password) VALUES (?, ?, ?)"
+      (regUsername regData, regEmail regData, hashedPwd)
   lastId <- lastInsertRowId conn
   return $ Right $ fromIntegral lastId
 
@@ -88,12 +87,13 @@ authenticateUser conn creds = do
         then do
           -- For now, return user with empty card collection
           -- In a real app, you'd load their actual collection from DB
-          let authUser = User
-                { auId = dbUserId dbUser,
-                  name = T.unpack $ dbUsername dbUser,
-                  email = T.unpack $ dbEmail dbUser,
-                  personalCollection = [] :: [Card]
-                }
+          let authUser =
+                User
+                  { auId = dbUserId dbUser,
+                    name = T.unpack $ dbUsername dbUser,
+                    email = T.unpack $ dbEmail dbUser,
+                    personalCollection = [] :: [Card]
+                  }
           return $ Just authUser
         else return Nothing
 
@@ -105,7 +105,7 @@ usernameExists conn username = do
     [Only count] -> return (count > (0 :: Int))
     _ -> return False
 
--- Check if email exists  
+-- Check if email exists
 emailExists :: Connection -> Text -> IO Bool
 emailExists conn email = do
   users <- query conn "SELECT COUNT(*) FROM users WHERE email = ?" (Only email)
@@ -117,18 +117,32 @@ emailExists conn email = do
 validateRegistration :: Connection -> RegisterData -> IO (Either String ())
 validateRegistration conn regData = do
   case () of
-    _ | T.length (regUsername regData) < 3 -> 
-        return $ Left "Username must be at least 3 characters"
-      | T.length (regPassword regData) < 6 -> 
-        return $ Left "Password must be at least 6 characters"
-      | not $ T.isInfixOf "@" (regEmail regData) -> 
-        return $ Left "Invalid email format"
+    _
+      | T.length (regUsername regData) < 3 ->
+          return $ Left "Username must be at least 3 characters"
+      | T.length (regPassword regData) < 6 ->
+          return $ Left "Password must be at least 6 characters"
+      | not $ T.isInfixOf "@" (regEmail regData) ->
+          return $ Left "Invalid email format"
       | otherwise -> do
-        usernameInUse <- usernameExists conn (regUsername regData)
-        if usernameInUse
-          then return $ Left "Username already exists"
-          else do
-            emailInUse <- emailExists conn (regEmail regData)
-            if emailInUse
-              then return $ Left "Email already exists"
-              else return $ Right ()
+          usernameInUse <- usernameExists conn (regUsername regData)
+          if usernameInUse
+            then return $ Left "Username already exists"
+            else do
+              emailInUse <- emailExists conn (regEmail regData)
+              if emailInUse
+                then return $ Left "Email already exists"
+                else return $ Right ()
+
+-- FromBasicAuthData instance for AuthenticatedUser
+-- This is a dummy instance since we use AuthCheck in Main.hs with database access
+instance FromBasicAuthData AuthenticatedUser where
+  fromBasicAuthData _ _ = return NoSuchUser  -- This will never be called due to AuthCheck
+
+-- Authentication check function for servant-auth
+-- This function will be used to create the authentication context
+authCheck :: Connection -> BasicAuthData -> IO (Maybe AuthenticatedUser)
+authCheck conn (BasicAuthData username password) = do
+  let creds = LoginCredentials (TE.decodeUtf8 username) (TE.decodeUtf8 password)
+  authenticateUser conn creds
+

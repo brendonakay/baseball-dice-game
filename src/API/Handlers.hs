@@ -2,19 +2,14 @@ module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef (readIORef, writeIORef)
-import Data.Text (Text)
 import qualified Data.Text as T
 import Database.SQLite.Simple (Connection)
 import Servant
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import Text.Blaze.Internal (stringValue)
 import Text.Read (readMaybe)
-
 import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, validateRegistration)
-
-import User.AuthenticatedUser (AuthenticatedUser, UserRef)
-
+import User.AuthenticatedUser (AuthenticatedUser (..), UserRef)
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
 import View.PersonalCollection (personalCollectionPageToHtml)
 import View.User (userPageToHtml)
@@ -36,17 +31,17 @@ loginPageHandler = do
     H.body ! A.style (str "background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;") $ do
       H.div ! A.style (str "max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);") $ do
         H.h1 ! A.style (str "text-align: center; color: #2c3e50; margin-bottom: 30px;") $ H.toHtml "Baseball Dice Game"
-        
+
         H.h2 ! A.style (str "color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Login"
         H.form ! A.action (str "/login") ! A.method (str "post") $ do
           H.div ! A.style (str "margin-bottom: 15px;") $ do
             H.label ! A.for (str "username") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
             H.input ! A.type_ (str "text") ! A.name (str "username") ! A.id (str "username") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (str "margin-bottom: 15px;") $ do  
+          H.div ! A.style (str "margin-bottom: 15px;") $ do
             H.label ! A.for (str "password") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
             H.input ! A.type_ (str "password") ! A.name (str "password") ! A.id (str "password") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
           H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Login"
-        
+
         H.h2 ! A.style (str "color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-top: 30px;") $ H.toHtml "Register"
         H.form ! A.action (str "/register") ! A.method (str "post") $ do
           H.div ! A.style (str "margin-bottom: 15px;") $ do
@@ -55,7 +50,7 @@ loginPageHandler = do
           H.div ! A.style (str "margin-bottom: 15px;") $ do
             H.label ! A.for (str "reg_email") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Email:"
             H.input ! A.type_ (str "email") ! A.name (str "email") ! A.id (str "reg_email") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (str "margin-bottom: 15px;") $ do  
+          H.div ! A.style (str "margin-bottom: 15px;") $ do
             H.label ! A.for (str "reg_password") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
             H.input ! A.type_ (str "password") ! A.name (str "password") ! A.id (str "reg_password") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
           H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
@@ -149,7 +144,7 @@ logoutHandler userRef = do
     H.body $ do
       H.p $ H.toHtml "Logged out successfully. Redirecting to login..."
 
--- User page handler - user dashboard with season info
+-- User page handler - user dashboard with season info  
 userPageHandler :: UserRef -> SeasonRef -> Handler Html
 userPageHandler userRef seasonRef = do
   maybeUser <- liftIO $ readIORef userRef
@@ -165,6 +160,12 @@ userPageHandler userRef seasonRef = do
       seasonState <- liftIO $ getCurrentSeasonState seasonRef
       return $ userPageToHtml user seasonState
 
+-- Authenticated user page handler - for the protected routes
+userPageHandlerAuth :: AuthenticatedUser -> SeasonRef -> Handler Html
+userPageHandlerAuth user seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ userPageToHtml user seasonState
+
 -- Personal collection page handler - displays user's card collection
 personalCollectionPageHandler :: UserRef -> SeasonRef -> Handler Html
 personalCollectionPageHandler userRef _ = do
@@ -179,6 +180,11 @@ personalCollectionPageHandler userRef _ = do
           H.p $ H.toHtml "Please login to access your collection. Redirecting..."
     Just user -> do
       return $ personalCollectionPageToHtml user
+
+-- Authenticated personal collection handler
+personalCollectionPageHandlerAuth :: AuthenticatedUser -> Handler Html
+personalCollectionPageHandlerAuth user = do
+  return $ personalCollectionPageToHtml user
 
 -- Start new season handler
 startNewSeasonHandler :: SeasonRef -> Handler Html
