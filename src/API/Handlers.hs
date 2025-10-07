@@ -3,11 +3,15 @@
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad (replicateM)
 import Data.IORef (readIORef, writeIORef)
 import qualified Data.Text as T
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Base64 as B64
+import Data.Word (Word8)
+import System.Random (randomIO)
 import Database.SQLite.Simple (Connection)
 import Servant
 import Servant.Auth.Server as SAS
@@ -63,7 +67,7 @@ loginPageHandler = do
           H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
 
 -- Login handler - processes login form  
-loginHandler :: Connection -> UserRef -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
+loginHandler :: Connection -> UserRef -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie, Header "Set-Cookie" SAS.SetCookie] Html)
 loginHandler dbConn userRef cookieSettings jwtSettings formData = do
   let getFormValue key = T.pack <$> lookup key formData
       username = getFormValue "username"
@@ -80,28 +84,37 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
           case eJwt of
             Left _ -> throwError err500 { errBody = L8.pack "Failed to create authentication token" }
             Right jwt -> do
-              let jwtCookie = def { setCookieName = BS8.pack "JWT-Cookie"
+              -- Generate XSRF token using simple random approach
+              randomBytes <- liftIO $ replicateM 32 (randomIO :: IO Word8)
+              let xsrfToken = B64.encode $ BS8.pack $ Prelude.map (toEnum . fromEnum) randomBytes
+                  jwtCookie = def { setCookieName = BS8.pack "JWT-Cookie"
                                   , setCookieValue = LBS.toStrict jwt
                                   , setCookieHttpOnly = True
                                   , setCookiePath = Just (BS8.pack "/")
                                   , setCookieSecure = SAS.cookieIsSecure cookieSettings == SAS.Secure
                                   }
-              -- Return HTML with meta refresh and JWT cookie set
-              return $ addHeader jwtCookie $ H.docTypeHtml $ do
+                  xsrfCookie = def { setCookieName = BS8.pack "XSRF-TOKEN"
+                                   , setCookieValue = xsrfToken
+                                   , setCookieHttpOnly = False  -- Must be readable by JavaScript
+                                   , setCookiePath = Just (BS8.pack "/")
+                                   , setCookieSecure = SAS.cookieIsSecure cookieSettings == SAS.Secure
+                                   }
+              -- Return HTML with meta refresh and both cookies set
+              return $ addHeader jwtCookie $ addHeader xsrfCookie $ H.docTypeHtml $ do
                 H.head $ do
                   H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/user")
                   H.title $ H.toHtml "Login Successful"
                 H.body $ do
                   H.p $ H.toHtml "Login successful! Redirecting..."
         Nothing -> do
-          return $ noHeader $ H.docTypeHtml $ do
+          return $ noHeader $ noHeader $ H.docTypeHtml $ do
             H.head $ H.title $ H.toHtml "Login Failed"
             H.body $ do
               H.h1 $ H.toHtml "Login Failed"
               H.p $ H.toHtml "Invalid username or password."
               H.a ! A.href (str "/") $ H.toHtml "Try again"
     _ -> do
-      return $ noHeader $ H.docTypeHtml $ do
+      return $ noHeader $ noHeader $ H.docTypeHtml $ do
         H.head $ H.title $ H.toHtml "Login Error"
         H.body $ do
           H.h1 $ H.toHtml "Login Error"
