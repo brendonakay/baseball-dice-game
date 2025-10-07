@@ -1,10 +1,17 @@
+{-# LANGUAGE DataKinds #-}
+
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef (readIORef, writeIORef)
 import qualified Data.Text as T
+import qualified Data.ByteString.Lazy.Char8 as L8
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Char8 as BS8
 import Database.SQLite.Simple (Connection)
 import Servant
+import Servant.Auth.Server as SAS
+import Web.Cookie (SetCookie(..), def)
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Read (readMaybe)
@@ -55,9 +62,9 @@ loginPageHandler = do
             H.input ! A.type_ (str "password") ! A.name (str "password") ! A.id (str "reg_password") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
           H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
 
--- Login handler - processes login form
-loginHandler :: Connection -> UserRef -> [(String, String)] -> Handler Html
-loginHandler dbConn userRef formData = do
+-- Login handler - processes login form  
+loginHandler :: Connection -> UserRef -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
+loginHandler dbConn userRef cookieSettings jwtSettings formData = do
   let getFormValue key = T.pack <$> lookup key formData
       username = getFormValue "username"
       password = getFormValue "password"
@@ -68,21 +75,33 @@ loginHandler dbConn userRef formData = do
       case maybeUser of
         Just user -> do
           liftIO $ writeIORef userRef (Just user)
-          return $ H.docTypeHtml $ do
-            H.head $ do
-              H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/user")
-              H.title $ H.toHtml "Login Successful"
-            H.body $ do
-              H.p $ H.toHtml "Login successful! Redirecting..."
+          -- Create JWT token
+          eJwt <- liftIO $ SAS.makeJWT user jwtSettings Nothing
+          case eJwt of
+            Left _ -> throwError err500 { errBody = L8.pack "Failed to create authentication token" }
+            Right jwt -> do
+              let jwtCookie = def { setCookieName = BS8.pack "JWT-Cookie"
+                                  , setCookieValue = LBS.toStrict jwt
+                                  , setCookieHttpOnly = True
+                                  , setCookiePath = Just (BS8.pack "/")
+                                  , setCookieSecure = SAS.cookieIsSecure cookieSettings == SAS.Secure
+                                  }
+              -- Return HTML with meta refresh and JWT cookie set
+              return $ addHeader jwtCookie $ H.docTypeHtml $ do
+                H.head $ do
+                  H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/user")
+                  H.title $ H.toHtml "Login Successful"
+                H.body $ do
+                  H.p $ H.toHtml "Login successful! Redirecting..."
         Nothing -> do
-          return $ H.docTypeHtml $ do
+          return $ noHeader $ H.docTypeHtml $ do
             H.head $ H.title $ H.toHtml "Login Failed"
             H.body $ do
               H.h1 $ H.toHtml "Login Failed"
               H.p $ H.toHtml "Invalid username or password."
               H.a ! A.href (str "/") $ H.toHtml "Try again"
     _ -> do
-      return $ H.docTypeHtml $ do
+      return $ noHeader $ H.docTypeHtml $ do
         H.head $ H.title $ H.toHtml "Login Error"
         H.body $ do
           H.h1 $ H.toHtml "Login Error"
