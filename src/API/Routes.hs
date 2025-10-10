@@ -34,7 +34,7 @@ type PublicAPI =
     -- Authentication
     :<|> "login"
       :> ReqBody '[FormUrlEncoded] [(String, String)]
-      :> Post '[HTML] (Headers '[Header "Set-Cookie" SAS.SetCookie, Header "Set-Cookie" SAS.SetCookie] Html)
+      :> Post '[HTML] (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
     :<|> "register"
       :> ReqBody '[FormUrlEncoded] [(String, String)]
       :> Post '[HTML] Html
