@@ -35,8 +35,11 @@ main = do
 
   -- Configure JWT and Cookie settings
   let jwtCfg = defaultJWTSettings jwk
-      cookieCfg = defaultCookieSettings {cookieIsSecure = NotSecure} -- For development
-      ctx = jwtCfg :. cookieCfg :. EmptyContext
+      cookieCfg = defaultCookieSettings {
+        cookieIsSecure = NotSecure, -- For development
+        cookieXsrfSetting = Nothing -- Disable XSRF protection for testing
+      }
+      ctx = cookieCfg :. jwtCfg :. EmptyContext
   putStrLn "Authentication context configured!"
 
   -- Start web server with database connection, user and season state

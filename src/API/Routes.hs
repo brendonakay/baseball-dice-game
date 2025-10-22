@@ -42,7 +42,7 @@ type PublicAPI =
 
 -- Protected API (authentication required)
 type ProtectedAPI =
-  Auth '[SA.JWT] AuthenticatedUser
+  Auth '[SA.Cookie] AuthenticatedUser
     :> (
          -- Pages
          -- /user (user dashboard page)
@@ -112,6 +112,6 @@ server dbConn userRef seasonRef cookieSettings jwtSettings =
 
 -- Create the application with database connection, user and season state
 -- Note: The context will be set up in Main.hs
-app :: Context '[SAS.JWTSettings, SAS.CookieSettings] -> Connection -> UserRef -> SeasonRef -> Application
-app ctx@(jwtSettings :. cookieSettings :. EmptyContext) dbConn userRef seasonRef = 
+app :: Context '[SAS.CookieSettings, SAS.JWTSettings] -> Connection -> UserRef -> SeasonRef -> Application
+app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn userRef seasonRef = 
   serveWithContext (Proxy :: Proxy API) ctx (server dbConn userRef seasonRef cookieSettings jwtSettings)

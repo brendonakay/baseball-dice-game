@@ -81,24 +81,11 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
       case maybeUser of
         Just user -> do
           liftIO $ writeIORef userRef (Just user)
-          -- Create JWT token
-          eJwt <- liftIO $ SAS.makeJWT user jwtSettings Nothing
-          case eJwt of
-            Left _ -> throwError err500 {errBody = L8.pack "Failed to create authentication token"}
-            Right jwt -> do
-              -- Generate XSRF token for additional security
-              randomBytes <- liftIO $ replicateM 32 (randomIO :: IO Word8)
-              let xsrfToken = B64.encode $ BS8.pack $ Prelude.map (toEnum . fromEnum) randomBytes
-                  bearerToken = "Bearer " ++ L8.unpack jwt
-                  xsrfCookie =
-                    def
-                      { setCookieName = BS8.pack "XSRF-TOKEN",
-                        setCookieValue = xsrfToken,
-                        setCookieHttpOnly = False, -- Must be readable by JavaScript
-                        setCookiePath = Just (BS8.pack "/"),
-                        setCookieSecure = SAS.cookieIsSecure cookieSettings == SAS.Secure
-                      }
-              -- Return HTML with JavaScript that sets auth header and redirects
+          -- Create authentication cookie using servant-auth-server
+          maybeSessionCookie <- liftIO $ SAS.makeSessionCookie cookieSettings jwtSettings user
+          case maybeSessionCookie of
+            Just sCookie -> do
+              -- Return HTML that redirects to user page
               let redirectHtml = H.docTypeHtml $ do
                     H.head $ do
                       H.title $ H.toHtml "Login Successful"
@@ -106,25 +93,11 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
                     H.body $ do
                       H.p $ H.toHtml "Login successful! Redirecting..."
                       H.script $ H.toHtml $ unlines
-                        [ "// Make HTMX request to /user with Authorization header"
-                        , "fetch('/user', {"
-                        , "  method: 'GET',"
-                        , "  headers: {"
-                        , "    'Authorization': '" ++ bearerToken ++ "'"
-                        , "  }"
-                        , "}).then(response => response.text())"
-                        , ".then(html => {"
-                        , "  document.open();"
-                        , "  document.write(html);"
-                        , "  document.close();"
-                        , "  // Update URL without page reload"
-                        , "  window.history.pushState({}, '', '/user');"
-                        , "}).catch(error => {"
-                        , "  console.error('Authentication failed:', error);"
-                        , "  window.location.href = '/';"
-                        , "});"
+                        [ "// Redirect to user page"
+                        , "window.location.href = '/user';"
                         ]
-              return $ addHeader xsrfCookie redirectHtml
+              return $ addHeader sCookie redirectHtml
+            Nothing -> throwError err500 {errBody = L8.pack "Failed to create authentication cookie"}
         Nothing -> do
           return $ noHeader $ H.docTypeHtml $ do
             H.head $ H.title $ H.toHtml "Login Failed"
