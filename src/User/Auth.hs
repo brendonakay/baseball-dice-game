@@ -12,7 +12,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.SQLite.Simple
 import GHC.Generics
-import Servant.Auth.Server (BasicAuthData(..), FromBasicAuthData(..), AuthResult(..))
+import Servant.Auth.Server (AuthResult (..), BasicAuthData (..), FromBasicAuthData (..))
 import User.AuthenticatedUser (AuthenticatedUser (..))
 import WaxBall.Card (Card)
 
@@ -137,7 +137,7 @@ validateRegistration conn regData = do
 -- FromBasicAuthData instance for AuthenticatedUser
 -- This is a dummy instance since we use AuthCheck in Main.hs with database access
 instance FromBasicAuthData AuthenticatedUser where
-  fromBasicAuthData _ _ = return NoSuchUser  -- This will never be called due to AuthCheck
+  fromBasicAuthData _ _ = return NoSuchUser -- This will never be called due to AuthCheck
 
 -- Authentication check function for servant-auth
 -- This function will be used to create the authentication context
@@ -145,4 +145,3 @@ authCheck :: Connection -> BasicAuthData -> IO (Maybe AuthenticatedUser)
 authCheck conn (BasicAuthData username password) = do
   let creds = LoginCredentials (TE.decodeUtf8 username) (TE.decodeUtf8 password)
   authenticateUser conn creds
-

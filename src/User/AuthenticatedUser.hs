@@ -6,7 +6,7 @@ module User.AuthenticatedUser where
 import Data.Aeson
 import Data.IORef
 import GHC.Generics
-import Servant.Auth.Server (ToJWT, FromJWT)
+import Servant.Auth.Server (FromJWT, ToJWT)
 import WaxBall.Card (Card)
 
 data AuthenticatedUser = User

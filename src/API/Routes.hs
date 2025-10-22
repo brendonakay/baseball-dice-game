@@ -113,5 +113,5 @@ server dbConn userRef seasonRef cookieSettings jwtSettings =
 -- Create the application with database connection, user and season state
 -- Note: The context will be set up in Main.hs
 app :: Context '[SAS.CookieSettings, SAS.JWTSettings] -> Connection -> UserRef -> SeasonRef -> Application
-app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn userRef seasonRef = 
+app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn userRef seasonRef =
   serveWithContext (Proxy :: Proxy API) ctx (server dbConn userRef seasonRef cookieSettings jwtSettings)

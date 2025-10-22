@@ -92,10 +92,12 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
                       H.script ! A.src (stringValue "https://unpkg.com/htmx.org@1.9.10") $ H.toHtml ""
                     H.body $ do
                       H.p $ H.toHtml "Login successful! Redirecting..."
-                      H.script $ H.toHtml $ unlines
-                        [ "// Redirect to user page"
-                        , "window.location.href = '/user';"
-                        ]
+                      H.script $
+                        H.toHtml $
+                          unlines
+                            [ "// Redirect to user page",
+                              "window.location.href = '/user';"
+                            ]
               return $ addHeader sCookie redirectHtml
             Nothing -> throwError err500 {errBody = L8.pack "Failed to create authentication cookie"}
         Nothing -> do
