@@ -112,20 +112,22 @@ executable baseball-dice-game
                     , jose
                     , time
 
-executable init-db
+executable util
     -- Import common warning flags.
     import:           warnings
 
     -- .hs or .lhs file containing the Main module.
-    main-is:          InitDB.hs
+    main-is:          Util.hs
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.18.2.1
                     , sqlite-simple
                     , text
+                    , directory
+                    , filepath
 
     -- Directories containing source files.
-    hs-source-dirs:   scripts
+    hs-source-dirs:   util
 
     -- Base language which the package is written in.
     default-language: Haskell2010

@@ -41,10 +41,6 @@ Each Game module should live in `src/Game/`
       file.
 - [ ] Leverage cool Servant features. API docs?
 
-### Database
-
-- [ ] Migrations
-
 ### Misc
 
 - [ ] Hot reloading. GHCid?
@@ -74,18 +70,33 @@ Each Game module should live in `src/Game/`
 4. The landing page links to detailed views of the various components
    listed.
 
-## Scripts
+## Util
 
-### Database Initialization
+### Database Utility
 
-Initialize a new SQLite database with a users table:
+The `util` tool provides database initialization, migration, and status commands:
+
+#### Initialize a fresh database
 
 ```bash
-cabal run init-db -- app.db
+cabal run util -- db-init app.db
 ```
 
-This creates a database file with a `users` table containing:
+#### Apply pending migrations to existing database
 
-- `userID` (INTEGER PRIMARY KEY AUTOINCREMENT)
-- `password` (TEXT NOT NULL)
-- `created_at` (DATETIME DEFAULT CURRENT_TIMESTAMP)
+```bash
+cabal run util -- db-migrate app.db
+```
+
+#### Check database status and pending migrations
+
+```bash
+cabal run util -- db-status app.db
+```
+
+#### Migration System
+
+- Migrations are stored in the `migrations/` directory
+- Each migration file follows the naming pattern: `XXX_description.sql`
+- The database schema version is tracked using SQLite's `PRAGMA user_version`
+- Migrations are applied in numerical order and only once

@@ -38,7 +38,7 @@ main = do
       ctx = cookieCfg :. jwtCfg :. EmptyContext
   putStrLn "Authentication context configured!"
 
-  -- Start web server with database connection, user and season state
+  -- Start web server with database connection and season state
   let port = 8080
   putStrLn $ "Starting server on port " ++ show port
   putStrLn "Visit http://localhost:8080 to login"
