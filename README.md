@@ -2,6 +2,8 @@
 
 Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/313285858/BaseballDiceGame_LouisvilleBats.pdf).
 
+Soon to be: Waxball!
+
 ## TODO
 
 - [ ] Create an architectural diagram.
@@ -9,10 +11,7 @@ Simulated baseball [dice game](https://milb.bamcontent.com/documents/8/5/8/31328
 
 ### App
 
-- [ ] App context. Gets initialized in `main`
 - [ ] Logging and debug
-- [ ] Better Auth
-- [ ] Multi-user
 
 ### Game
 
@@ -22,7 +21,6 @@ Each Game module should live in `src/Game/`
   - Rip wax
 - [ ] Roster
 - [ ] Simulator Something to simulate entire seasons/games
-- [ ] Authentication
 - [ ] Authorization
 - [ ] League
 - [ ] Game
@@ -56,10 +54,10 @@ Each Game module should live in `src/Game/`
 
 ## Architectural Roadmap
 
-- [ ] HTMX Web App.
+- [x] HTMX Web App.
 - [ ] Cloud hosted.
-- [ ] Authentication / user base.
-- [ ] SQLite for persistence.
+- [x] Authentication / user base.
+- [x] SQLite for persistence.
 
 ## User Flow
 

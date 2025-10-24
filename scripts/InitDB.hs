@@ -10,16 +10,14 @@ build-depends: base, sqlite-simple, text
 module Main where
 
 import Control.Exception (bracket)
-import Data.Text (Text)
 import Database.SQLite.Simple
-import Database.SQLite.Simple.Types
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 
 -- Users table schema
 createUsersTable :: Query
 createUsersTable =
-  Query $
+  Query
     "CREATE TABLE IF NOT EXISTS users (\
     \  userID INTEGER PRIMARY KEY AUTOINCREMENT,\
     \  username TEXT UNIQUE NOT NULL,\

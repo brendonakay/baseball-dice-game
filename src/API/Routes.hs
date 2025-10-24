@@ -28,6 +28,8 @@ import Text.Blaze.Html (Html)
 import User.AuthenticatedUser (AuthenticatedUser)
 import WaxBall.Season (SeasonRef)
 
+-- API Types
+
 -- Public API (no authentication required)
 type PublicAPI =
   -- / (login page)
@@ -70,6 +72,8 @@ type ProtectedAPI =
 -- Combined API
 type API = PublicAPI :<|> ProtectedAPI
 
+-- API Server Implementations
+
 -- Public server handlers
 publicServer :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> Server PublicAPI
 publicServer dbConn cookieSettings jwtSettings =
@@ -80,6 +84,7 @@ publicServer dbConn cookieSettings jwtSettings =
     :<|> logoutHandler
 
 -- Protected server handlers
+-- TODO: Maybe organize each endpoint by category
 protectedServer ::
   SeasonRef ->
   AuthResult AuthenticatedUser ->
@@ -110,7 +115,7 @@ server dbConn seasonRef cookieSettings jwtSettings =
   publicServer dbConn cookieSettings jwtSettings
     :<|> protectedServer seasonRef
 
--- Create the application with database connection, user and season state
+-- Create the application with a database connection and season state
 -- Note: The context will be set up in Main.hs
 app :: Context '[SAS.CookieSettings, SAS.JWTSettings] -> Connection -> SeasonRef -> Application
 app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn seasonRef =

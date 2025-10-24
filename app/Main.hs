@@ -10,7 +10,6 @@ import Network.Wai.Handler.Warp (run)
 import Servant (Context (..))
 import Servant.Auth.Server as SAS
 import User.Auth ()
-import User.AuthenticatedUser (AuthenticatedUser (..))
 import WaxBall.Season (newSeasonState)
 
 main :: IO ()
