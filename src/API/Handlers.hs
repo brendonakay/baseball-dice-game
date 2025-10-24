@@ -2,35 +2,27 @@
 
 module API.Handlers where
 
-import Control.Monad (replicateM)
 import Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as L8
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (writeIORef)
 import qualified Data.Text as T
-import Data.Word (Word8)
 import Database.SQLite.Simple (Connection)
 import Servant
 import Servant.Auth.Server as SAS
-import System.Random (randomIO)
 import Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Blaze.Htmx as Htmx
 import Text.Read (readMaybe)
 import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, validateRegistration)
-import User.AuthenticatedUser (AuthenticatedUser (..), UserRef)
+import User.AuthenticatedUser (AuthenticatedUser (..))
 import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
 import View.PersonalCollection (personalCollectionPageToHtml)
 import View.User (userPageToHtml)
 import WaxBall.Game (Player (..), isGameOver)
 import WaxBall.Season (GameResult (..), SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
-import Web.Cookie (SetCookie (..), def)
 
--- Helper function to convert strings to AttributeValue
-str :: String -> H.AttributeValue
-str = stringValue
+-- TODO:
+-- - Move HTML logic to View module
 
 -- Login page handler - shows login/register form
 loginPageHandler :: Handler Html
@@ -38,39 +30,39 @@ loginPageHandler = do
   return $ H.docTypeHtml $ do
     H.head $ do
       H.title $ H.toHtml "Baseball Dice Game - Login"
-      H.meta ! A.charset (str "utf-8")
-      H.meta ! A.name (str "viewport") ! A.content (str "width=device-width, initial-scale=1")
+      H.meta ! A.charset (stringValue "utf-8")
+      H.meta ! A.name (stringValue "viewport") ! A.content (stringValue "width=device-width, initial-scale=1")
       H.script ! A.src (stringValue "https://unpkg.com/htmx.org@1.9.10") $ H.toHtml ""
-    H.body ! A.style (str "background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;") $ do
-      H.div ! A.style (str "max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);") $ do
-        H.h1 ! A.style (str "text-align: center; color: #2c3e50; margin-bottom: 30px;") $ H.toHtml "Baseball Dice Game"
+    H.body ! A.style (stringValue "background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;") $ do
+      H.div ! A.style (stringValue "max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);") $ do
+        H.h1 ! A.style (stringValue "text-align: center; color: #2c3e50; margin-bottom: 30px;") $ H.toHtml "Baseball Dice Game"
 
-        H.h2 ! A.style (str "color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Login"
-        H.form ! Htmx.hxPost (str "/login") ! Htmx.hxTarget (str "body") $ do
-          H.div ! A.style (str "margin-bottom: 15px;") $ do
-            H.label ! A.for (str "username") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
-            H.input ! A.type_ (str "text") ! A.name (str "username") ! A.id (str "username") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (str "margin-bottom: 15px;") $ do
-            H.label ! A.for (str "password") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
-            H.input ! A.type_ (str "password") ! A.name (str "password") ! A.id (str "password") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Login"
+        H.h2 ! A.style (stringValue "color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Login"
+        H.form ! Htmx.hxPost (stringValue "/login") ! Htmx.hxTarget (stringValue "body") $ do
+          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
+            H.label ! A.for (stringValue "username") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
+            H.input ! A.type_ (stringValue "text") ! A.name (stringValue "username") ! A.id (stringValue "username") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
+          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
+            H.label ! A.for (stringValue "password") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
+            H.input ! A.type_ (stringValue "password") ! A.name (stringValue "password") ! A.id (stringValue "password") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
+          H.button ! A.type_ (stringValue "submit") ! A.style (stringValue "width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Login"
 
-        H.h2 ! A.style (str "color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-top: 30px;") $ H.toHtml "Register"
-        H.form ! Htmx.hxPost (str "/register") ! Htmx.hxTarget (str "body") $ do
-          H.div ! A.style (str "margin-bottom: 15px;") $ do
-            H.label ! A.for (str "reg_username") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
-            H.input ! A.type_ (str "text") ! A.name (str "username") ! A.id (str "reg_username") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (str "margin-bottom: 15px;") $ do
-            H.label ! A.for (str "reg_email") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Email:"
-            H.input ! A.type_ (str "email") ! A.name (str "email") ! A.id (str "reg_email") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (str "margin-bottom: 15px;") $ do
-            H.label ! A.for (str "reg_password") ! A.style (str "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
-            H.input ! A.type_ (str "password") ! A.name (str "password") ! A.id (str "reg_password") ! A.required (str "") ! A.style (str "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.button ! A.type_ (str "submit") ! A.style (str "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
+        H.h2 ! A.style (stringValue "color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-top: 30px;") $ H.toHtml "Register"
+        H.form ! Htmx.hxPost (stringValue "/register") ! Htmx.hxTarget (stringValue "body") $ do
+          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
+            H.label ! A.for (stringValue "reg_username") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
+            H.input ! A.type_ (stringValue "text") ! A.name (stringValue "username") ! A.id (stringValue "reg_username") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
+          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
+            H.label ! A.for (stringValue "reg_email") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Email:"
+            H.input ! A.type_ (stringValue "email") ! A.name (stringValue "email") ! A.id (stringValue "reg_email") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
+          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
+            H.label ! A.for (stringValue "reg_password") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
+            H.input ! A.type_ (stringValue "password") ! A.name (stringValue "password") ! A.id (stringValue "reg_password") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
+          H.button ! A.type_ (stringValue "submit") ! A.style (stringValue "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
 
 -- Login handler - processes login form
-loginHandler :: Connection -> UserRef -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
-loginHandler dbConn userRef cookieSettings jwtSettings formData = do
+loginHandler :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
+loginHandler dbConn cookieSettings jwtSettings formData = do
   let getFormValue key = T.pack <$> lookup key formData
       username = getFormValue "username"
       password = getFormValue "password"
@@ -80,7 +72,7 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
       maybeUser <- liftIO $ authenticateUser dbConn creds
       case maybeUser of
         Just user -> do
-          liftIO $ writeIORef userRef (Just user)
+          -- TODO: Move this paragraph to its own function
           -- Create authentication cookie using servant-auth-server
           maybeSessionCookie <- liftIO $ SAS.makeSessionCookie cookieSettings jwtSettings user
           case maybeSessionCookie of
@@ -106,18 +98,18 @@ loginHandler dbConn userRef cookieSettings jwtSettings formData = do
             H.body $ do
               H.h1 $ H.toHtml "Login Failed"
               H.p $ H.toHtml "Invalid username or password."
-              H.a ! A.href (str "/") $ H.toHtml "Try again"
+              H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
     _ -> do
       return $ noHeader $ H.docTypeHtml $ do
         H.head $ H.title $ H.toHtml "Login Error"
         H.body $ do
           H.h1 $ H.toHtml "Login Error"
           H.p $ H.toHtml "Missing username or password."
-          H.a ! A.href (str "/") $ H.toHtml "Try again"
+          H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
 
 -- Register handler - processes registration form
-registerHandler :: Connection -> UserRef -> [(String, String)] -> Handler Html
-registerHandler dbConn userRef formData = do
+registerHandler :: Connection -> [(String, String)] -> Handler Html
+registerHandler dbConn formData = do
   let getFormValue key = T.pack <$> lookup key formData
       username = getFormValue "username"
       email = getFormValue "email"
@@ -133,7 +125,7 @@ registerHandler dbConn userRef formData = do
             H.body $ do
               H.h1 $ H.toHtml "Registration Failed"
               H.p $ H.toHtml errorMsg
-              H.a ! A.href (str "/") $ H.toHtml "Try again"
+              H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
         Right () -> do
           result <- liftIO $ createUser dbConn regData
           case result of
@@ -143,26 +135,25 @@ registerHandler dbConn userRef formData = do
                 H.body $ do
                   H.h1 $ H.toHtml "Registration Failed"
                   H.p $ H.toHtml errorMsg
-                  H.a ! A.href (str "/") $ H.toHtml "Try again"
+                  H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
             Right _ -> do
               return $ H.docTypeHtml $ do
                 H.head $ H.title $ H.toHtml "Registration Successful"
                 H.body $ do
                   H.h1 $ H.toHtml "Registration Successful"
                   H.p $ H.toHtml "You can now login with your credentials."
-                  H.a ! A.href (str "/") $ H.toHtml "Login"
+                  H.a ! A.href (stringValue "/") $ H.toHtml "Login"
     _ -> do
       return $ H.docTypeHtml $ do
         H.head $ H.title $ H.toHtml "Registration Error"
         H.body $ do
           H.h1 $ H.toHtml "Registration Error"
           H.p $ H.toHtml "Missing required fields."
-          H.a ! A.href (str "/") $ H.toHtml "Try again"
+          H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
 
 -- Logout handler - clears user session
-logoutHandler :: UserRef -> Handler Html
-logoutHandler userRef = do
-  liftIO $ writeIORef userRef Nothing
+logoutHandler :: Handler Html
+logoutHandler = do
   return $ H.docTypeHtml $ do
     H.head $ do
       H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/")
@@ -171,20 +162,10 @@ logoutHandler userRef = do
       H.p $ H.toHtml "Logged out successfully. Redirecting to login..."
 
 -- User page handler - user dashboard with season info
-userPageHandler :: UserRef -> SeasonRef -> Handler Html
-userPageHandler userRef seasonRef = do
-  maybeUser <- liftIO $ readIORef userRef
-  case maybeUser of
-    Nothing -> do
-      return $ H.docTypeHtml $ do
-        H.head $ do
-          H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/")
-          H.title $ H.toHtml "Please Login"
-        H.body $ do
-          H.p $ H.toHtml "Please login to access your dashboard. Redirecting..."
-    Just user -> do
-      seasonState <- liftIO $ getCurrentSeasonState seasonRef
-      return $ userPageToHtml user seasonState
+userPageHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
+userPageHandler user seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ userPageToHtml user seasonState
 
 -- Authenticated user page handler - for the protected routes
 userPageHandlerAuth :: AuthenticatedUser -> SeasonRef -> Handler Html
@@ -193,19 +174,9 @@ userPageHandlerAuth user seasonRef = do
   return $ userPageToHtml user seasonState
 
 -- Personal collection page handler - displays user's card collection
-personalCollectionPageHandler :: UserRef -> SeasonRef -> Handler Html
-personalCollectionPageHandler userRef _ = do
-  maybeUser <- liftIO $ readIORef userRef
-  case maybeUser of
-    Nothing -> do
-      return $ H.docTypeHtml $ do
-        H.head $ do
-          H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/")
-          H.title $ H.toHtml "Please Login"
-        H.body $ do
-          H.p $ H.toHtml "Please login to access your collection. Redirecting..."
-    Just user -> do
-      return $ personalCollectionPageToHtml user
+personalCollectionPageHandler :: AuthenticatedUser -> Handler Html
+personalCollectionPageHandler user = do
+  return $ personalCollectionPageToHtml user
 
 -- Authenticated personal collection handler
 personalCollectionPageHandlerAuth :: AuthenticatedUser -> Handler Html
@@ -264,8 +235,8 @@ startSeasonGameHandler seasonRef = do
 
 -- Auto-advance season game data frame
 -- Uses the persistent game state tracking in Season module
-advanceSeasonGameDataFrame :: UserRef -> SeasonRef -> Handler Html
-advanceSeasonGameDataFrame userRef seasonRef = do
+advanceSeasonGameDataFrame :: AuthenticatedUser -> SeasonRef -> Handler Html
+advanceSeasonGameDataFrame user seasonRef = do
   -- Advance the current game by one step, maintaining all game state including pitch log
   maybeGameState <- liftIO $ runAdvanceCurrentGame seasonRef
   case maybeGameState of
@@ -275,15 +246,7 @@ advanceSeasonGameDataFrame userRef seasonRef = do
       case gameResults seasonState of
         [] -> do
           -- No games completed yet, fallback to user page
-          maybeUser <- liftIO $ readIORef userRef
-          case maybeUser of
-            Nothing -> return $ H.docTypeHtml $ do
-              H.head $ do
-                H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/")
-                H.title $ H.toHtml "Please Login"
-              H.body $ do
-                H.p $ H.toHtml "Please login to continue. Redirecting..."
-            Just user -> return $ userPageToHtml user seasonState
+          return $ userPageToHtml user seasonState
         (mostRecent : _) -> do
           -- Use the most recent completed game state to show completion screen
           return $ gameCompletionHtml (gameState mostRecent)

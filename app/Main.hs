@@ -20,10 +20,6 @@ main = do
   dbConn <- open "app.db"
   putStrLn "Database connected!"
 
-  -- Initialize default user state (will be replaced by authenticated user)
-  userRef <- newIORef (Nothing :: Maybe AuthenticatedUser) -- No user initially
-  putStrLn "User state initialized!"
-
   -- Initialize empty season state
   let emptySeasonState = newSeasonState [] [] -- Start with empty teams
   seasonRef <- newIORef emptySeasonState
@@ -47,4 +43,4 @@ main = do
   let port = 8080
   putStrLn $ "Starting server on port " ++ show port
   putStrLn "Visit http://localhost:8080 to login"
-  run port (App.app ctx dbConn userRef seasonRef)
+  run port (App.app ctx dbConn seasonRef)

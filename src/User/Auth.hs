@@ -86,7 +86,7 @@ authenticateUser conn creds = do
       if verifyPassword (loginPassword creds) (dbPassword dbUser)
         then do
           -- For now, return user with empty card collection
-          -- In a real app, you'd load their actual collection from DB
+          -- TODO: load their actual collection from DB
           let authUser =
                 User
                   { auId = dbUserId dbUser,

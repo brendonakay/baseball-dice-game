@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 
 module API.Routes where
@@ -24,7 +25,7 @@ import Servant.Auth.Server (AuthResult (..), throwAll)
 import qualified Servant.Auth.Server as SAS
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html)
-import User.AuthenticatedUser (AuthenticatedUser, UserRef)
+import User.AuthenticatedUser (AuthenticatedUser)
 import WaxBall.Season (SeasonRef)
 
 -- Public API (no authentication required)
@@ -70,17 +71,16 @@ type ProtectedAPI =
 type API = PublicAPI :<|> ProtectedAPI
 
 -- Public server handlers
-publicServer :: Connection -> UserRef -> SAS.CookieSettings -> SAS.JWTSettings -> Server PublicAPI
-publicServer dbConn userRef cookieSettings jwtSettings =
+publicServer :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> Server PublicAPI
+publicServer dbConn cookieSettings jwtSettings =
   loginPageHandler
     -- Authentication
-    :<|> loginHandler dbConn userRef cookieSettings jwtSettings
-    :<|> registerHandler dbConn userRef
-    :<|> logoutHandler userRef
+    :<|> loginHandler dbConn cookieSettings jwtSettings
+    :<|> registerHandler dbConn
+    :<|> logoutHandler
 
 -- Protected server handlers
 protectedServer ::
-  UserRef ->
   SeasonRef ->
   AuthResult AuthenticatedUser ->
   Server
@@ -93,25 +93,25 @@ protectedServer ::
         :<|> "next-game" :> Post '[HTML] Html
         :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
     )
--- TODO: Replace Userref with authenticated user
-protectedServer userRef seasonRef (Authenticated user) =
-  userPageHandler userRef seasonRef
-    :<|> personalCollectionPageHandler userRef seasonRef
+protectedServer seasonRef (Authenticated user) =
+  userPageHandler user seasonRef
+    :<|> personalCollectionPageHandler user
     :<|> startNewSeasonHandler seasonRef
     :<|> seasonConfigPageHandler seasonRef
     :<|> startSeasonGameHandler seasonRef
-    :<|> advanceSeasonGameDataFrame userRef seasonRef
+    :<|> advanceSeasonGameDataFrame user seasonRef
     :<|> nextSeasonGameHandler seasonRef
     :<|> \formData -> do updateSeasonPlayerHandler seasonRef formData
-protectedServer _ _ _ = throwAll err401
+protectedServer _ _ = throwAll err401
 
 -- Combined server
-server :: Connection -> UserRef -> SeasonRef -> SAS.CookieSettings -> SAS.JWTSettings -> Server API
-server dbConn userRef seasonRef cookieSettings jwtSettings =
-  publicServer dbConn userRef cookieSettings jwtSettings :<|> protectedServer userRef seasonRef
+server :: Connection -> SeasonRef -> SAS.CookieSettings -> SAS.JWTSettings -> Server API
+server dbConn seasonRef cookieSettings jwtSettings =
+  publicServer dbConn cookieSettings jwtSettings
+    :<|> protectedServer seasonRef
 
 -- Create the application with database connection, user and season state
 -- Note: The context will be set up in Main.hs
-app :: Context '[SAS.CookieSettings, SAS.JWTSettings] -> Connection -> UserRef -> SeasonRef -> Application
-app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn userRef seasonRef =
-  serveWithContext (Proxy :: Proxy API) ctx (server dbConn userRef seasonRef cookieSettings jwtSettings)
+app :: Context '[SAS.CookieSettings, SAS.JWTSettings] -> Connection -> SeasonRef -> Application
+app ctx@(cookieSettings :. jwtSettings :. EmptyContext) dbConn seasonRef =
+  serveWithContext (Proxy :: Proxy API) ctx (server dbConn seasonRef cookieSettings jwtSettings)

@@ -4,7 +4,6 @@
 module User.AuthenticatedUser where
 
 import Data.Aeson
-import Data.IORef
 import GHC.Generics
 import Servant.Auth.Server (FromJWT, ToJWT)
 import WaxBall.Card (Card)
@@ -16,6 +15,3 @@ data AuthenticatedUser = User
     personalCollection :: [Card]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToJWT, FromJWT)
-
--- Reference type for thread-safe user state management
-type UserRef = IORef (Maybe AuthenticatedUser)
