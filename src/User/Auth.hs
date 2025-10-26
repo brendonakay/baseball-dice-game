@@ -86,12 +86,12 @@ authenticateUser conn creds = do
       if verifyPassword (loginPassword creds) (dbPassword dbUser)
         then do
           -- For now, return user with empty card collection
-          -- TODO: load their actual collection from DB
           let authUser =
                 User
                   { auId = dbUserId dbUser,
                     name = T.unpack $ dbUsername dbUser,
                     email = T.unpack $ dbEmail dbUser,
+                    -- TODO: load their actual collection from DB
                     personalCollection = [] :: [Card]
                   }
           return $ Just authUser
@@ -114,6 +114,7 @@ emailExists conn email = do
     _ -> return False
 
 -- Validate registration data
+-- TODO: This whole damn thing needs to be way more robust
 validateRegistration :: Connection -> RegisterData -> IO (Either String ())
 validateRegistration conn regData = do
   case () of

@@ -96,6 +96,7 @@ personalCollectionPageHandlerAuth user = do
 -- Start new season handler
 startNewSeasonHandler :: SeasonRef -> Handler Html
 startNewSeasonHandler seasonRef = do
+  -- TODO: Remove this boilerplate when Cards are implemented
   -- Create default teams (reusing logic from WaxBall.State)
   let homeTeam =
         [ Player "Home A" 1 0.285 0.350 0.450,

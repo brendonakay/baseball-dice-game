@@ -10,24 +10,25 @@ build-depends: base, sqlite-simple, text, directory, filepath
 
 module Main where
 
-import Control.Exception (bracket, try, SomeException)
-import Control.Monad (when, unless)
-import Database.SQLite.Simple
+import Control.Exception (SomeException, bracket, try)
+import Control.Monad (unless, when)
 import Data.List (sort)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import System.Directory (doesFileExist, doesDirectoryExist, listDirectory, createDirectoryIfMissing)
+import qualified Data.Text.IO as TO
+import Database.SQLite.Simple
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist, listDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
-import System.FilePath ((</>), takeExtension, dropExtension)
+import System.FilePath (dropExtension, takeExtension, (</>))
 
 -- Migration data type
 data Migration = Migration
-  { migrationVersion :: Int
-  , migrationFile :: FilePath
-  , migrationDescription :: Text
-  } deriving (Show, Eq)
+  { migrationVersion :: Int,
+    migrationFile :: FilePath,
+    migrationDescription :: Text
+  }
+  deriving (Show, Eq)
 
 instance Ord Migration where
   compare (Migration v1 _ _) (Migration v2 _ _) = compare v1 v2
@@ -51,7 +52,7 @@ parseMigrationFile filename
   | takeExtension filename == ".sql" = do
       let baseName = dropExtension filename
       case break (== '_') baseName of
-        (versionStr, '_':description) -> do
+        (versionStr, '_' : description) -> do
           version <- readMaybe versionStr
           return $ Migration version filename (T.pack description)
         _ -> Nothing
@@ -79,7 +80,7 @@ discoverMigrations = do
 readMigrationContent :: Migration -> IO Text
 readMigrationContent (Migration _ filename _) = do
   let filepath = "migrations" </> filename
-  TIO.readFile filepath
+  TO.readFile filepath
 
 -- Apply a single migration
 applyMigration :: Connection -> Migration -> IO ()
@@ -101,11 +102,11 @@ getPendingMigrations conn allMigrations = do
 initializeDatabase :: String -> IO ()
 initializeDatabase dbPath = do
   putStrLn $ "Initializing database at: " ++ dbPath
-  
+
   migrations <- discoverMigrations
   when (null migrations) $ do
     putStrLn "Warning: No migrations found in migrations/ directory"
-    
+
   bracket (open dbPath) close $ \conn -> do
     mapM_ (applyMigration conn) migrations
     putStrLn "✓ Database initialization complete!"
@@ -114,13 +115,13 @@ initializeDatabase dbPath = do
 migrateDatabase :: String -> IO ()
 migrateDatabase dbPath = do
   putStrLn $ "Migrating database at: " ++ dbPath
-  
+
   exists <- doesFileExist dbPath
   unless exists $ do
     putStrLn $ "Error: Database file " ++ dbPath ++ " does not exist"
     putStrLn "Use 'db-init' to create a new database"
     exitFailure
-    
+
   migrations <- discoverMigrations
   bracket (open dbPath) close $ \conn -> do
     pending <- getPendingMigrations conn migrations
@@ -135,21 +136,21 @@ migrateDatabase dbPath = do
 showDatabaseStatus :: String -> IO ()
 showDatabaseStatus dbPath = do
   putStrLn $ "Database status for: " ++ dbPath
-  
+
   exists <- doesFileExist dbPath
   unless exists $ do
     putStrLn "❌ Database file does not exist"
     return ()
-    
+
   migrations <- discoverMigrations
   bracket (open dbPath) close $ \conn -> do
     currentVersion <- getCurrentVersion conn
     pending <- getPendingMigrations conn migrations
-    
+
     putStrLn $ "Current schema version: " ++ show currentVersion
     putStrLn $ "Available migrations: " ++ show (length migrations)
     putStrLn $ "Pending migrations: " ++ show (length pending)
-    
+
     unless (null pending) $ do
       putStrLn "\nPending migrations:"
       mapM_ (\(Migration v _ desc) -> putStrLn $ "  " ++ show v ++ ": " ++ T.unpack desc) pending
@@ -180,7 +181,7 @@ main = do
     _ -> do
       printUsage
       exitFailure
-  
+
   case result of
     Left (ex :: SomeException) -> do
       putStrLn $ "❌ Error: " ++ show ex

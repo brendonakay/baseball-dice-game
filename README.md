@@ -12,6 +12,7 @@ Soon to be: Waxball!
 ### App
 
 - [ ] Logging and debug
+- [ ] Explicit exports from modules for cleaner code
 
 ### Game
 
