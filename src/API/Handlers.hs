@@ -10,55 +10,20 @@ import Database.SQLite.Simple (Connection)
 import Servant
 import Servant.Auth.Server as SAS
 import Text.Blaze.Html5 as H
-import qualified Text.Blaze.Html5.Attributes as A
-import Text.Blaze.Htmx as Htmx
 import Text.Read (readMaybe)
 import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, validateRegistration)
 import User.AuthenticatedUser (AuthenticatedUser (..))
-import View.HTMX (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml, seasonConfigPageToHtml, seasonPageToHtml, updatePlayerAtIndex)
+import View.Auth (loginErrorHtml, loginFailedHtml, loginPageHtml, loginSuccessRedirectHtml, logoutHtml, registrationErrorHtml, registrationFailedHtml, registrationSuccessHtml)
+import View.Config (updatePlayerAtIndex)
+import View.Game (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml)
 import View.PersonalCollection (personalCollectionPageToHtml)
+import View.Season (seasonConfigPageToHtml, seasonPageToHtml)
 import View.User (userPageToHtml)
 import WaxBall.Game (Player (..), isGameOver)
 import WaxBall.Season (GameResult (..), SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
 
--- TODO:
--- - Move HTML logic to View module
-
--- Login page handler - shows login/register form
 loginPageHandler :: Handler Html
-loginPageHandler = do
-  return $ H.docTypeHtml $ do
-    H.head $ do
-      H.title $ H.toHtml "Baseball Dice Game - Login"
-      H.meta ! A.charset (stringValue "utf-8")
-      H.meta ! A.name (stringValue "viewport") ! A.content (stringValue "width=device-width, initial-scale=1")
-      H.script ! A.src (stringValue "https://unpkg.com/htmx.org@1.9.10") $ H.toHtml ""
-    H.body ! A.style (stringValue "background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;") $ do
-      H.div ! A.style (stringValue "max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);") $ do
-        H.h1 ! A.style (stringValue "text-align: center; color: #2c3e50; margin-bottom: 30px;") $ H.toHtml "Baseball Dice Game"
-
-        H.h2 ! A.style (stringValue "color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px;") $ H.toHtml "Login"
-        H.form ! Htmx.hxPost (stringValue "/login") ! Htmx.hxTarget (stringValue "body") $ do
-          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
-            H.label ! A.for (stringValue "username") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
-            H.input ! A.type_ (stringValue "text") ! A.name (stringValue "username") ! A.id (stringValue "username") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
-            H.label ! A.for (stringValue "password") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
-            H.input ! A.type_ (stringValue "password") ! A.name (stringValue "password") ! A.id (stringValue "password") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.button ! A.type_ (stringValue "submit") ! A.style (stringValue "width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Login"
-
-        H.h2 ! A.style (stringValue "color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-top: 30px;") $ H.toHtml "Register"
-        H.form ! Htmx.hxPost (stringValue "/register") ! Htmx.hxTarget (stringValue "body") $ do
-          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
-            H.label ! A.for (stringValue "reg_username") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Username:"
-            H.input ! A.type_ (stringValue "text") ! A.name (stringValue "username") ! A.id (stringValue "reg_username") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
-            H.label ! A.for (stringValue "reg_email") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Email:"
-            H.input ! A.type_ (stringValue "email") ! A.name (stringValue "email") ! A.id (stringValue "reg_email") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.div ! A.style (stringValue "margin-bottom: 15px;") $ do
-            H.label ! A.for (stringValue "reg_password") ! A.style (stringValue "display: block; margin-bottom: 5px; font-weight: bold;") $ H.toHtml "Password:"
-            H.input ! A.type_ (stringValue "password") ! A.name (stringValue "password") ! A.id (stringValue "reg_password") ! A.required (stringValue "") ! A.style (stringValue "width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;")
-          H.button ! A.type_ (stringValue "submit") ! A.style (stringValue "width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") $ H.toHtml "Register"
+loginPageHandler = return loginPageHtml
 
 -- Login handler - processes login form
 loginHandler :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
@@ -77,35 +42,10 @@ loginHandler dbConn cookieSettings jwtSettings formData = do
           maybeSessionCookie <- liftIO $ SAS.makeSessionCookie cookieSettings jwtSettings user
           case maybeSessionCookie of
             Just sCookie -> do
-              -- Return HTML that redirects to user page
-              let redirectHtml = H.docTypeHtml $ do
-                    H.head $ do
-                      H.title $ H.toHtml "Login Successful"
-                      H.script ! A.src (stringValue "https://unpkg.com/htmx.org@1.9.10") $ H.toHtml ""
-                    H.body $ do
-                      H.p $ H.toHtml "Login successful! Redirecting..."
-                      H.script $
-                        H.toHtml $
-                          unlines
-                            [ "// Redirect to user page",
-                              "window.location.href = '/user';"
-                            ]
-              return $ addHeader sCookie redirectHtml
+              return $ addHeader sCookie loginSuccessRedirectHtml
             Nothing -> throwError err500 {errBody = L8.pack "Failed to create authentication cookie"}
-        Nothing -> do
-          return $ noHeader $ H.docTypeHtml $ do
-            H.head $ H.title $ H.toHtml "Login Failed"
-            H.body $ do
-              H.h1 $ H.toHtml "Login Failed"
-              H.p $ H.toHtml "Invalid username or password."
-              H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
-    _ -> do
-      return $ noHeader $ H.docTypeHtml $ do
-        H.head $ H.title $ H.toHtml "Login Error"
-        H.body $ do
-          H.h1 $ H.toHtml "Login Error"
-          H.p $ H.toHtml "Missing username or password."
-          H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
+        Nothing -> return $ noHeader loginFailedHtml
+    _ -> return $ noHeader loginErrorHtml
 
 -- Register handler - processes registration form
 registerHandler :: Connection -> [(String, String)] -> Handler Html
@@ -119,47 +59,17 @@ registerHandler dbConn formData = do
       let regData = RegisterData u e p
       validation <- liftIO $ validateRegistration dbConn regData
       case validation of
-        Left errorMsg -> do
-          return $ H.docTypeHtml $ do
-            H.head $ H.title $ H.toHtml "Registration Failed"
-            H.body $ do
-              H.h1 $ H.toHtml "Registration Failed"
-              H.p $ H.toHtml errorMsg
-              H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
+        Left errorMsg -> return $ registrationFailedHtml errorMsg
         Right () -> do
           result <- liftIO $ createUser dbConn regData
           case result of
-            Left errorMsg -> do
-              return $ H.docTypeHtml $ do
-                H.head $ H.title $ H.toHtml "Registration Failed"
-                H.body $ do
-                  H.h1 $ H.toHtml "Registration Failed"
-                  H.p $ H.toHtml errorMsg
-                  H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
-            Right _ -> do
-              return $ H.docTypeHtml $ do
-                H.head $ H.title $ H.toHtml "Registration Successful"
-                H.body $ do
-                  H.h1 $ H.toHtml "Registration Successful"
-                  H.p $ H.toHtml "You can now login with your credentials."
-                  H.a ! A.href (stringValue "/") $ H.toHtml "Login"
-    _ -> do
-      return $ H.docTypeHtml $ do
-        H.head $ H.title $ H.toHtml "Registration Error"
-        H.body $ do
-          H.h1 $ H.toHtml "Registration Error"
-          H.p $ H.toHtml "Missing required fields."
-          H.a ! A.href (stringValue "/") $ H.toHtml "Try again"
+            Left errorMsg -> return $ registrationFailedHtml errorMsg
+            Right _ -> return registrationSuccessHtml
+    _ -> return registrationErrorHtml
 
 -- Logout handler - clears user session
 logoutHandler :: Handler Html
-logoutHandler = do
-  return $ H.docTypeHtml $ do
-    H.head $ do
-      H.meta ! A.httpEquiv (stringValue "refresh") ! A.content (stringValue "0;url=/")
-      H.title $ H.toHtml "Logged Out"
-    H.body $ do
-      H.p $ H.toHtml "Logged out successfully. Redirecting to login..."
+logoutHandler = return logoutHtml
 
 -- User page handler - user dashboard with season info
 userPageHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
