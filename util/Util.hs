@@ -3,6 +3,7 @@
 build-depends: base, sqlite-simple, text, directory, filepath
 -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- Database utility tool for baseball-dice-game
 -- Handles database initialization, migrations, and status checking
@@ -12,11 +13,11 @@ module Main where
 import Control.Exception (bracket, try, SomeException)
 import Control.Monad (when, unless)
 import Database.SQLite.Simple
-import Data.List (sort, isPrefixOf)
+import Data.List (sort)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (doesFileExist, listDirectory, createDirectoryIfMissing)
+import System.Directory (doesFileExist, doesDirectoryExist, listDirectory, createDirectoryIfMissing)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath ((</>), takeExtension, dropExtension)
@@ -66,7 +67,7 @@ discoverMigrations :: IO [Migration]
 discoverMigrations = do
   let migrationsDir = "migrations"
   createDirectoryIfMissing False migrationsDir
-  exists <- doesFileExist migrationsDir
+  exists <- doesDirectoryExist migrationsDir
   if exists
     then do
       files <- listDirectory migrationsDir
@@ -85,8 +86,9 @@ applyMigration :: Connection -> Migration -> IO ()
 applyMigration conn migration@(Migration version _ description) = do
   putStrLn $ "Applying migration " ++ show version ++ ": " ++ T.unpack description
   content <- readMigrationContent migration
-  execute_ conn (Query content)
-  setVersion conn version
+  -- Split content into individual statements and execute each
+  let statements = filter (not . T.null . T.strip) $ T.splitOn ";" content
+  mapM_ (\stmt -> execute_ conn (Query $ T.strip stmt)) statements
   putStrLn $ "✓ Migration " ++ show version ++ " applied successfully"
 
 -- Get pending migrations (those with version > current database version)
@@ -137,7 +139,7 @@ showDatabaseStatus dbPath = do
   exists <- doesFileExist dbPath
   unless exists $ do
     putStrLn "❌ Database file does not exist"
-    return
+    return ()
     
   migrations <- discoverMigrations
   bracket (open dbPath) close $ \conn -> do
