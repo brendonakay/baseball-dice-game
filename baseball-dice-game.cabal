@@ -128,6 +128,7 @@ executable util
                     , text
                     , directory
                     , filepath
+                    , random
 
     -- Directories containing source files.
     hs-source-dirs:   util

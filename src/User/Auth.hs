@@ -14,7 +14,9 @@ import Database.SQLite.Simple
 import GHC.Generics
 import Servant.Auth.Server (AuthResult (..), BasicAuthData (..), FromBasicAuthData (..))
 import User.AuthenticatedUser (AuthenticatedUser (..))
-import WaxBall.Card (Card)
+import WaxBall.Card (Card (..), Class (..), Special (..), Type (..))
+import WaxBall.Game (Player)
+import qualified WaxBall.Game as Game
 
 -- Database user representation
 data DbUser = DbUser
@@ -27,6 +29,72 @@ data DbUser = DbUser
 
 instance FromRow DbUser where
   fromRow = DbUser <$> field <*> field <*> field <*> field
+
+-- FromRow instance for Player
+instance FromRow Player where
+  fromRow = Game.Player <$> field <*> field <*> field <*> field <*> field
+
+-- Helper function to parse Special from database text
+parseSpecial :: Maybe Text -> Maybe Special
+parseSpecial Nothing = Nothing
+parseSpecial (Just "AUTOGRAPH") = Just Autograph
+parseSpecial (Just "SERIAL") = Just Serial
+parseSpecial _ = Nothing
+
+-- Helper function to parse Class from database text
+parseClass :: Text -> Class
+parseClass "BASE" = Base
+parseClass "INSERT" = Insert
+parseClass "PARALLEL" = Parallel
+parseClass _ = Base -- Default fallback
+
+-- Database representation for Card with flattened Player data
+data DbCard = DbCard
+  { dbCardId :: Int,
+    dbCardNumber :: Text,
+    dbCardTeam :: Text,
+    dbCardClass :: Text,
+    dbCardSpecial :: Maybe Text,
+    -- Player fields
+    dbPlayerName :: Text,
+    dbPlayerNumber :: Int,
+    dbPlayerBattingAverage :: Double,
+    dbPlayerOnBasePercentage :: Double,
+    dbPlayerSluggingPercentage :: Double
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromRow DbCard where
+  fromRow =
+    DbCard
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+
+-- Convert DbCard to Card
+dbCardToCard :: DbCard -> Card
+dbCardToCard dbCard =
+  Card
+    { WaxBall.Card.id = dbCardId dbCard,
+      WaxBall.Card.number = T.unpack $ dbCardNumber dbCard,
+      player =
+        Game.Player
+          { Game.name = T.unpack $ dbPlayerName dbCard,
+            Game.number = dbPlayerNumber dbCard,
+            Game.battingAverage = dbPlayerBattingAverage dbCard,
+            Game.onBasePercentage = dbPlayerOnBasePercentage dbCard,
+            Game.sluggingPercentage = dbPlayerSluggingPercentage dbCard
+          },
+      team = T.unpack $ dbCardTeam dbCard,
+      cardType = Type (parseClass $ dbCardClass dbCard) (parseSpecial $ dbCardSpecial dbCard)
+    }
 
 -- Login credentials
 data LoginCredentials = LoginCredentials
@@ -71,10 +139,24 @@ createUser conn regData = do
 -- Find user by username
 findUserByUsername :: Connection -> Text -> IO (Maybe DbUser)
 findUserByUsername conn username = do
-  users <- query conn "SELECT userID, username, email, password FROM users WHERE username = ?" (Only username)
+  users <- query conn "SELECT id, username, email, password FROM users WHERE username = ?" (Only username)
   case users of
     [user] -> return $ Just user
     _ -> return Nothing
+
+-- Fetch user's personal collection of cards
+fetchUserCards :: Connection -> Int -> IO [Card]
+fetchUserCards conn userId = do
+  dbCards <-
+    query
+      conn
+      "SELECT c.id, c.number, c.team, c.card_class, c.special, \
+      \       p.name, p.number, p.batting_average, p.on_base_percentage, p.slugging_percentage \
+      \FROM cards c \
+      \JOIN players p ON c.player_id = p.id \
+      \WHERE c.user_id = ?"
+      (Only userId)
+  return $ map dbCardToCard dbCards
 
 -- Authenticate user with credentials
 authenticateUser :: Connection -> LoginCredentials -> IO (Maybe AuthenticatedUser)
@@ -85,14 +167,13 @@ authenticateUser conn creds = do
     Just dbUser ->
       if verifyPassword (loginPassword creds) (dbPassword dbUser)
         then do
-          -- For now, return user with empty card collection
+          -- Create user without loading cards - cards will be loaded when needed
           let authUser =
                 User
                   { auId = dbUserId dbUser,
-                    name = T.unpack $ dbUsername dbUser,
-                    email = T.unpack $ dbEmail dbUser,
-                    -- TODO: load their actual collection from DB
-                    personalCollection = [] :: [Card]
+                    User.AuthenticatedUser.name = T.unpack $ dbUsername dbUser,
+                    User.AuthenticatedUser.email = T.unpack $ dbEmail dbUser,
+                    personalCollection = [] -- Empty collection, will be loaded separately
                   }
           return $ Just authUser
         else return Nothing

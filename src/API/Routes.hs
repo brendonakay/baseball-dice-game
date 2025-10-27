@@ -86,6 +86,7 @@ publicServer dbConn cookieSettings jwtSettings =
 -- Protected server handlers
 -- TODO: Maybe organize each endpoint by category
 protectedServer ::
+  Connection ->
   SeasonRef ->
   AuthResult AuthenticatedUser ->
   Server
@@ -98,22 +99,22 @@ protectedServer ::
         :<|> "next-game" :> Post '[HTML] Html
         :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
     )
-protectedServer seasonRef (Authenticated user) =
+protectedServer dbConn seasonRef (Authenticated user) =
   userPageHandler user seasonRef
-    :<|> personalCollectionPageHandler user
+    :<|> personalCollectionPageHandler dbConn user
     :<|> startNewSeasonHandler seasonRef
     :<|> seasonConfigPageHandler seasonRef
     :<|> startSeasonGameHandler seasonRef
     :<|> advanceSeasonGameDataFrame user seasonRef
     :<|> nextSeasonGameHandler seasonRef
     :<|> \formData -> do updateSeasonPlayerHandler seasonRef formData
-protectedServer _ _ = throwAll err401
+protectedServer _ _ _ = throwAll err401
 
 -- Combined server
 server :: Connection -> SeasonRef -> SAS.CookieSettings -> SAS.JWTSettings -> Server API
 server dbConn seasonRef cookieSettings jwtSettings =
   publicServer dbConn cookieSettings jwtSettings
-    :<|> protectedServer seasonRef
+    :<|> protectedServer dbConn seasonRef
 
 -- Create the application with a database connection and season state
 -- Note: The context will be set up in Main.hs
