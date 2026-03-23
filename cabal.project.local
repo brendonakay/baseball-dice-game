@@ -1,5 +1,6 @@
 ignore-project: False
 documentation: True
+tests: True
 
 package *
   documentation: True

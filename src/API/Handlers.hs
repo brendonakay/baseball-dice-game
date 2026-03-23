@@ -11,7 +11,7 @@ import Servant
 import Servant.Auth.Server as SAS
 import Text.Blaze.Html5 as H
 import Text.Read (readMaybe)
-import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, validateRegistration, fetchUserCards)
+import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, fetchUserCards, validateRegistration)
 import User.AuthenticatedUser (AuthenticatedUser (..))
 import View.Auth (loginErrorHtml, loginFailedHtml, loginPageHtml, loginSuccessRedirectHtml, logoutHtml, registrationErrorHtml, registrationFailedHtml, registrationSuccessHtml)
 import View.Config (updatePlayerAtIndex)
@@ -89,7 +89,7 @@ personalCollectionPageHandler dbConn user = do
   -- Fetch the user's actual card collection from database
   userCards <- liftIO $ fetchUserCards dbConn (auId user)
   -- Create user with loaded cards for the view
-  let userWithCards = user { personalCollection = userCards }
+  let userWithCards = user {personalCollection = userCards}
   return $ personalCollectionPageToHtml userWithCards
 
 -- Authenticated personal collection handler

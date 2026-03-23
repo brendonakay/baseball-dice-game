@@ -159,7 +159,7 @@ showDatabaseStatus dbPath = do
 -- Test card generation functions
 
 -- Player data for realistic test cards
-testPlayers :: [(Text, Int, Text)]  -- (name, number, team)
+testPlayers :: [(Text, Int, Text)] -- (name, number, team)
 testPlayers =
   [ ("Mike Trout", 27, "Angels"),
     ("Mookie Betts", 50, "Dodgers"),
@@ -199,8 +199,12 @@ cardDistribution = replicate 12 "BASE" ++ replicate 3 "PARALLEL" ++ replicate 2 
 
 -- Special card distribution (only for non-base cards)
 specialDistribution :: [Maybe Text]
-specialDistribution = replicate 12 Nothing ++ replicate 2 Nothing ++ [Just "SERIAL"] ++ 
-                     replicate 2 Nothing ++ [Just "AUTOGRAPH"]
+specialDistribution =
+  replicate 12 Nothing
+    ++ replicate 2 Nothing
+    ++ [Just "SERIAL"]
+    ++ replicate 2 Nothing
+    ++ [Just "AUTOGRAPH"]
 
 -- Generate a random card number
 generateCardNumber :: IO Text
@@ -211,7 +215,8 @@ generateCardNumber = do
 -- Insert a player into the database and return the player ID
 insertPlayer :: Connection -> (Text, Int, Text) -> (Double, Double, Double) -> IO Int
 insertPlayer conn (playerName, playerNum, _) (avg, obp, slg) = do
-  execute conn 
+  execute
+    conn
     "INSERT INTO players (name, number, batting_average, on_base_percentage, slugging_percentage) VALUES (?, ?, ?, ?, ?)"
     (playerName, playerNum, avg, obp, slg)
   lastId <- lastInsertRowId conn
@@ -227,7 +232,8 @@ insertSet conn setName = do
 -- Insert a card into the database
 insertCard :: Connection -> Int -> Int -> Int -> Text -> Text -> Text -> Maybe Text -> IO ()
 insertCard conn playerId setId userId cardNum team cardClass special = do
-  execute conn
+  execute
+    conn
     "INSERT INTO cards (number, player_id, set_id, user_id, team, card_class, special) VALUES (?, ?, ?, ?, ?, ?, ?)"
     (cardNum, playerId, setId, userId, team, cardClass, special)
 
@@ -236,43 +242,45 @@ generateUserPersonalCollection :: String -> Int -> IO ()
 generateUserPersonalCollection dbPath userId = do
   putStrLn $ "Generating 18 test cards for user ID: " ++ show userId
   putStrLn $ "Database: " ++ dbPath
-  
+
   bracket (open dbPath) close $ \conn -> do
     -- Create the test set
     setId <- insertSet conn "2024 Topps Series 1"
     putStrLn $ "✓ Created card set with ID: " ++ show setId
-    
+
     -- Generate cards with the specified distribution
     let playerData = take 18 $ cycle testPlayers
     let cardTypes = cardDistribution
     let specials = specialDistribution
-    
-    mapM_ (\(_, ((playerName, playerNum, team), cardType, special)) -> do
-        -- Generate player stats
-        stats <- generatePlayerStats
-        
-        -- Insert player
-        playerId <- insertPlayer conn (playerName, playerNum, team) stats
-        
-        -- Generate card number
-        cardNum <- generateCardNumber
-        
-        -- Insert card
-        insertCard conn playerId setId userId cardNum team cardType special
-        
-        let cardDesc = case special of
-              Just s -> T.unpack cardType ++ " (" ++ T.unpack s ++ ")"
-              Nothing -> T.unpack cardType
-        
-        putStrLn $ "  ✓ " ++ T.unpack playerName ++ " #" ++ T.unpack cardNum ++ " - " ++ cardDesc
-      ) (zip [1..] (zip3 playerData cardTypes specials))
-    
+
+    mapM_
+      ( \(_, ((playerName, playerNum, team), cardType, special)) -> do
+          -- Generate player stats
+          stats <- generatePlayerStats
+
+          -- Insert player
+          playerId <- insertPlayer conn (playerName, playerNum, team) stats
+
+          -- Generate card number
+          cardNum <- generateCardNumber
+
+          -- Insert card
+          insertCard conn playerId setId userId cardNum team cardType special
+
+          let cardDesc = case special of
+                Just s -> T.unpack cardType ++ " (" ++ T.unpack s ++ ")"
+                Nothing -> T.unpack cardType
+
+          putStrLn $ "  ✓ " ++ T.unpack playerName ++ " #" ++ T.unpack cardNum ++ " - " ++ cardDesc
+      )
+      (zip [1 ..] (zip3 playerData cardTypes specials))
+
     putStrLn $ "✓ Successfully generated 18 test cards!"
-    
+
     -- Print summary
     putStrLn "\nCard Distribution:"
     putStrLn "  • 12 Base cards"
-    putStrLn "  • 3 Parallel cards" 
+    putStrLn "  • 3 Parallel cards"
     putStrLn "  • 2 Insert cards"
     putStrLn "  • 1 Serial card"
     putStrLn "  • 1 Autograph card"

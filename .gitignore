@@ -5,3 +5,6 @@ dist-*
 
 # App related
 app.db
+
+# Lake (Lean 4 build system)
+lean/.lake/

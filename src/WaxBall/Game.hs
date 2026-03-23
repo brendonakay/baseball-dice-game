@@ -12,6 +12,12 @@ module WaxBall.Game
     pitchBallOrStrike,
     runPitch,
     isGameOver,
+    Game,
+    addBall,
+    addStrike,
+    addOut,
+    clearBalls,
+    clearStrikes,
     GameState (..),
     Player (..),
     StrikeAction (..),
@@ -126,7 +132,7 @@ data GameState = GameState
     currentBatter :: Maybe Player, -- Current batter (if any).
     pitchLog :: PitchLog -- Log of pitch actions.
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Team = [Player]
 
@@ -300,20 +306,13 @@ nextHalfInning = do
     Bottom -> do
       let currentInning = inning gs
           homeWinning = homeScore gs > awayScore gs
+          awayWinning = awayScore gs > homeScore gs
 
       if currentInning >= 9 && homeWinning
-        then return ()
+        then return () -- home team wins
         else
-          if currentInning >= 9 && homeScore gs == awayScore gs
-            then modify $ \gs' ->
-              gs'
-                { inning = inning gs' + 1,
-                  outs = 0,
-                  balls = 0,
-                  bases = emptyBases,
-                  currentBatter = Nothing,
-                  halfInning = Top
-                }
+          if currentInning >= 9 && awayWinning
+            then return () -- away team wins
             else modify $ \gs' ->
               gs'
                 { inning = inning gs' + 1,
