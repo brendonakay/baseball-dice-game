@@ -34,11 +34,68 @@ Currently, for this project I am using Lean to formally verify the game state,
 functions that operate on that state, and testing parity using an approach
 called *Differential Random Testing (DRT)*.
 
+### Differential Random Testing
+
+The formal proofs verify properties of a Lean *model* of the game logic. That
+model is a separate thing from the Haskell implementation, which means it is
+possible for the two to silently diverge. DRT closes that gap by making the
+Lean model *executable* and using it as a "reference oracle" against the running
+Haskell implementation.
+
+The flow looks like this:
+
+```
+QuickCheck generates a random GameState
+        │
+        ├───────────────────────────────┐
+        ▼                               ▼
+Haskell function              Lean executable (JSON over stdin/stdout)
+e.g. addBall gs               e.g. DiffTest add-ball
+        │                               │
+        └──────────────┬────────────────┘
+                       ▼
+              compare outputs — any divergence
+              is a counterexample printed by hspec
+```
+
+The Lean executable (`lean/DiffTest/Main.lean`) reads a JSON-encoded
+`GameState` from stdin, applies the named pure transition, and writes the
+result back as JSON. The Haskell driver (`test/DiffTest.hs`) generates 100
+random states per transition, feeds them through both sides, and fails the
+test on the first disagreement.
+
+#### Building
+
+The Lean oracle is built through the Nix flake:
+
+```bash
+nix build .#difftest
+```
+
+This produces `result/bin/DiffTest`. The test suite picks it up automatically.
+
+#### Running
+
+```bash
+cabal test spec
+```
+
+The DRT tests are included in the existing hspec suite. If `result/bin/DiffTest`
+is not present the differential tests are silently skipped — the rest of the
+QuickCheck suite still runs.
+
+For more detail on what is proved, the proof techniques, and the design
+decisions behind the Lean model, see the [Formal Verification Research](#formal-verification-research)
+section below.
+
 ## TODO
 ### App
 
 - [ ] Logging and debug
 - [ ] Explicit exports from modules for cleaner code
+- [ ] Formalize more of the GameState functions and clean up unused game logic.
+  Can go hand in hand with the above.
+- [ ] Persistence. Postgres or something.
 
 ### Game
 
