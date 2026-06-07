@@ -35,6 +35,7 @@ instance Arbitrary Player where
       <*> choose (0.150, 0.400)
       <*> choose (0.200, 0.500)
       <*> choose (0.300, 0.700)
+      <*> pure Nothing
 
 instance Arbitrary BasesState where
   arbitrary =

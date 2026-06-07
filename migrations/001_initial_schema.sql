@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS players (
   number INTEGER NOT NULL,
   batting_average REAL NOT NULL,
   on_base_percentage REAL NOT NULL,
-  slugging_percentage REAL NOT NULL
+  slugging_percentage REAL NOT NULL,
+  era REAL  -- NULL for batters; set for pitchers / two-way players
 );
 
 CREATE TABLE IF NOT EXISTS sets (

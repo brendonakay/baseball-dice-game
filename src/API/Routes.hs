@@ -6,6 +6,8 @@ module API.Routes where
 
 import API.Handlers
   ( advanceSeasonGameDataFrame,
+    gameFrameHandler,
+    gamesPageHandler,
     loginHandler,
     loginPageHandler,
     logoutHandler,
@@ -13,6 +15,7 @@ import API.Handlers
     personalCollectionPageHandler,
     registerHandler,
     seasonConfigPageHandler,
+    seasonPageHandler,
     startNewSeasonHandler,
     startSeasonGameHandler,
     updateSeasonPlayerHandler,
@@ -46,11 +49,16 @@ type PublicAPI =
 -- Protected API (authentication required)
 type ProtectedAPI =
   Auth '[SA.Cookie] AuthenticatedUser
-    :> (
-         -- Pages
+    :> ( -- Pages
          -- /user (user dashboard page)
          "user" :> Get '[HTML] Html
            :<|> "personal-collection" :> Get '[HTML] Html
+           -- /season (dedicated season page)
+           :<|> "season" :> Get '[HTML] Html
+           -- /games (stub games page)
+           :<|> "games" :> Get '[HTML] Html
+           -- /game-frame (HTMX fragment for landing page game shell)
+           :<|> "game-frame" :> Get '[HTML] Html
            --
            -- Containers & Data
            -- /start-season (start a new 10-game season)
@@ -84,7 +92,6 @@ publicServer dbConn cookieSettings jwtSettings =
     :<|> logoutHandler
 
 -- Protected server handlers
--- TODO: Maybe organize each endpoint by category
 protectedServer ::
   Connection ->
   SeasonRef ->
@@ -92,6 +99,9 @@ protectedServer ::
   Server
     ( "user" :> Get '[HTML] Html
         :<|> "personal-collection" :> Get '[HTML] Html
+        :<|> "season" :> Get '[HTML] Html
+        :<|> "games" :> Get '[HTML] Html
+        :<|> "game-frame" :> Get '[HTML] Html
         :<|> "start-season" :> Post '[HTML] Html
         :<|> "season-config" :> Get '[HTML] Html
         :<|> "start-game" :> Post '[HTML] Html
@@ -102,12 +112,15 @@ protectedServer ::
 protectedServer dbConn seasonRef (Authenticated user) =
   userPageHandler user seasonRef
     :<|> personalCollectionPageHandler dbConn user
-    :<|> startNewSeasonHandler seasonRef
-    :<|> seasonConfigPageHandler seasonRef
+    :<|> seasonPageHandler user seasonRef
+    :<|> gamesPageHandler user
+    :<|> gameFrameHandler user seasonRef
+    :<|> startNewSeasonHandler dbConn user seasonRef
+    :<|> seasonConfigPageHandler user seasonRef
     :<|> startSeasonGameHandler seasonRef
     :<|> advanceSeasonGameDataFrame user seasonRef
-    :<|> nextSeasonGameHandler seasonRef
-    :<|> \formData -> do updateSeasonPlayerHandler seasonRef formData
+    :<|> nextSeasonGameHandler user seasonRef
+    :<|> (\formData -> updateSeasonPlayerHandler user seasonRef formData)
 protectedServer _ _ _ = throwAll err401
 
 -- Combined server

@@ -9,6 +9,7 @@
 module WaxBall.Game
   ( initialGameState,
     newGameState,
+    defaultPitcher,
     pitchBallOrStrike,
     runPitch,
     isGameOver,
@@ -62,7 +63,8 @@ data Player = Player
     number :: Int,
     battingAverage :: Double,
     onBasePercentage :: Double,
-    sluggingPercentage :: Double
+    sluggingPercentage :: Double,
+    era :: Maybe Double -- Earned Run Average; Nothing for pure batters
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -130,6 +132,8 @@ data GameState = GameState
     strikes :: Int, -- Number of strikes in the inning.
     bases :: BasesState, -- Bases occupied.
     currentBatter :: Maybe Player, -- Current batter (if any).
+    homePitcher :: Player, -- Current pitcher for the home team.
+    awayPitcher :: Player, -- Current pitcher for the away team.
     pitchLog :: PitchLog -- Log of pitch actions.
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -151,6 +155,18 @@ data BasesState = BasesState
 emptyBases :: BasesState
 emptyBases = BasesState Nothing Nothing Nothing Nothing
 
+-- Placeholder pitcher used when no real pitcher has been assigned.
+defaultPitcher :: Player
+defaultPitcher =
+  Player
+    { name = "Unknown",
+      number = 0,
+      battingAverage = 0.0,
+      onBasePercentage = 0.0,
+      sluggingPercentage = 0.0,
+      era = Just 4.00
+    }
+
 newGameState :: GameState
 newGameState =
   GameState
@@ -165,18 +181,21 @@ newGameState =
       strikes = 0,
       bases = emptyBases,
       currentBatter = Nothing,
-      pitchLog =
-        []
+      homePitcher = defaultPitcher,
+      awayPitcher = defaultPitcher,
+      pitchLog = []
     }
 
 -- Initial game state. Set the batting order for both teams and bring the first
 -- player to the plate.
-initialGameState :: HomeTeam -> AwayTeam -> Game ()
-initialGameState ht at = do
+initialGameState :: HomeTeam -> AwayTeam -> Player -> Player -> Game ()
+initialGameState ht at hp ap = do
   modify $ \gs ->
     gs
       { homeBatting = ht,
-        awayBatting = at
+        awayBatting = at,
+        homePitcher = hp,
+        awayPitcher = ap
       }
   batterUp
 
@@ -365,8 +384,10 @@ runStrikeAction a b = do
   case currentBatter gs of
     Nothing -> pure NoAction -- Do nothing if no current batter
     Just player -> do
-      -- Use new batting average system
-      strikeAction <- liftIO $ getPlayerStrikeAction player a b
+      let pitcher = case halfInning gs of
+            Top -> homePitcher gs -- home team pitches when away bats
+            Bottom -> awayPitcher gs -- away team pitches when home bats
+      strikeAction <- liftIO $ getPlayerStrikeAction player pitcher a b
       executeStrikeAction strikeAction
 
 executeStrikeAction :: StrikeAction -> Game StrikeAction
@@ -525,15 +546,43 @@ data StrikeAction
   | NoAction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- New batting average-based hit determination
-getPlayerStrikeAction :: Player -> Int -> Int -> IO StrikeAction
-getPlayerStrikeAction player dice1 dice2 = do
-  hitRoll <- randomRIO (0.0, 1.0) :: IO Double
-  let diceModifier = fromIntegral (dice1 + dice2) / 12.0 -- Normalize dice to 0.17-1.0 range
-      adjustedAverage = battingAverage player * diceModifier
+leagueAverageERA :: Double
+leagueAverageERA = 4.00
 
+-- | Determine what happens when the current batter faces a strike.
+--
+-- Hit probability is computed from three factors multiplied together:
+--
+--   adjustedAverage = battingAverage × diceModifier × eraFactor
+--
+-- 1. battingAverage — the batter's season average; represents baseline hit
+--    skill. A .300 hitter has a 30% raw hit rate.
+--
+-- 2. diceModifier — (die1 + die2) / 12.0, range [0.17, 1.0]. The two dice
+--    introduce per-at-bat variance. A high roll (e.g. 6+6=12 → 1.0) gives the
+--    batter the full benefit of their average; a low roll (e.g. 1+1=2 → 0.17)
+--    reduces their chance even for good hitters, simulating weak contact,
+--    bad luck, or a tough pitch sequence.
+--
+-- 3. eraFactor — pitcher.era / leagueAverageERA (defaults to 1.0 when ERA is
+--    Nothing). ERA measures how many earned runs a pitcher allows per 9
+--    innings. Dividing by the league average (4.00) normalises it:
+--      - ERA 2.00 → factor 0.50: elite pitcher cuts effective average in half.
+--      - ERA 4.00 → factor 1.00: average pitcher, no effect.
+--      - ERA 6.00 → factor 1.50: poor pitcher boosts effective average 50%.
+--    Using division (rather than subtraction) keeps the scaling proportional
+--    and avoids negative averages for extreme ERA values.
+--
+-- A single random roll in [0, 1] is compared to adjustedAverage.
+-- If roll ≤ adjustedAverage the batter gets a hit; otherwise it is an out.
+getPlayerStrikeAction :: Player -> Player -> Int -> Int -> IO StrikeAction
+getPlayerStrikeAction batter pitcher dice1 dice2 = do
+  hitRoll <- randomRIO (0.0, 1.0) :: IO Double
+  let diceModifier = fromIntegral (dice1 + dice2) / 12.0
+      eraFactor = maybe 1.0 (/ leagueAverageERA) (era pitcher)
+      adjustedAverage = battingAverage batter * diceModifier * eraFactor
   if hitRoll <= adjustedAverage
-    then determineHitType player dice1 dice2
+    then determineHitType batter dice1 dice2
     else determineOutType dice1 dice2
 
 -- Determine type of hit based on player's slugging percentage and dice
@@ -550,6 +599,8 @@ determineHitType player dice1 dice2 = do
       doubleThreshold = singleThreshold + 0.20 + (powerFactor - 0.4) * 0.1
       tripleThreshold = doubleThreshold + 0.05 + (if diceSum >= 10 then 0.02 else 0.0)
 
+  -- TODO: Clean this shit up. AI slop (my own bad). I don't like the if/else chaining. There has to be better
+  -- evaluation methods.
   if hitTypeRoll <= singleThreshold
     then return HitSingle
     else
@@ -565,6 +616,7 @@ determineOutType :: Int -> Int -> IO StrikeAction
 determineOutType dice1 dice2 = do
   outTypeRoll <- randomRIO (0.0, 1.0) :: IO Double
 
+  -- TODO: Refactor this. I think the if else chaining can be cleaned up.
   -- Special actions based on dice combinations (preserving some original logic)
   case (dice1, dice2) of
     (1, 3) -> return HitByPitch -- Keep hit by pitch on specific dice

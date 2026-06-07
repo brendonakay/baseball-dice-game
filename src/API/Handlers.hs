@@ -1,23 +1,26 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module API.Handlers where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Data.IORef (writeIORef)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Database.SQLite.Simple (Connection)
 import Servant
 import Servant.Auth.Server as SAS
 import Text.Blaze.Html5 as H
 import Text.Read (readMaybe)
-import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, fetchUserCards, validateRegistration)
+import User.Auth (LoginCredentials (..), RegisterData (..), authenticateUser, createUser, fetchUserCards, loadSeasonTeams, validateRegistration)
 import User.AuthenticatedUser (AuthenticatedUser (..))
 import View.Auth (loginErrorHtml, loginFailedHtml, loginPageHtml, loginSuccessRedirectHtml, logoutHtml, registrationErrorHtml, registrationFailedHtml, registrationSuccessHtml)
 import View.Config (updatePlayerAtIndex)
-import View.Game (autoAdvancingGameFrameHtml, autoAdvancingGamePageHtml, gameCompletionHtml)
+import View.Game (activeGameFragment, autoAdvancingGameFrameHtml, gameCompletionHtml)
+import View.Games (gamesPageToHtml)
 import View.PersonalCollection (personalCollectionPageToHtml)
-import View.Season (seasonConfigPageToHtml, seasonPageToHtml)
+import View.Season (gameFrameSeasonFragment, renderSeasonPlayerForm, seasonConfigPageToHtml, seasonPageToHtml)
 import View.User (userPageToHtml)
 import WaxBall.Game (Player (..), isGameOver)
 import WaxBall.Season (GameResult (..), SeasonRef, SeasonState (..), getCurrentSeasonState, newSeasonState, runAdvanceCurrentGame, runRecordGameResult, runStartNextGame)
@@ -37,8 +40,6 @@ loginHandler dbConn cookieSettings jwtSettings formData = do
       maybeUser <- liftIO $ authenticateUser dbConn creds
       case maybeUser of
         Just user -> do
-          -- TODO: Move this paragraph to its own function
-          -- Create authentication cookie using servant-auth-server
           maybeSessionCookie <- liftIO $ SAS.makeSessionCookie cookieSettings jwtSettings user
           case maybeSessionCookie of
             Just sCookie -> do
@@ -71,123 +72,97 @@ registerHandler dbConn formData = do
 logoutHandler :: Handler Html
 logoutHandler = return logoutHtml
 
--- User page handler - user dashboard with season info
+-- User page handler - user dashboard with game shell
 userPageHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
 userPageHandler user seasonRef = do
-  seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ userPageToHtml user seasonState
-
--- Authenticated user page handler - for the protected routes
-userPageHandlerAuth :: AuthenticatedUser -> SeasonRef -> Handler Html
-userPageHandlerAuth user seasonRef = do
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
   return $ userPageToHtml user seasonState
 
 -- Personal collection page handler - displays user's card collection
 personalCollectionPageHandler :: Connection -> AuthenticatedUser -> Handler Html
 personalCollectionPageHandler dbConn user = do
-  -- Fetch the user's actual card collection from database
   userCards <- liftIO $ fetchUserCards dbConn (auId user)
-  -- Create user with loaded cards for the view
   let userWithCards = user {personalCollection = userCards}
   return $ personalCollectionPageToHtml userWithCards
 
--- Authenticated personal collection handler
-personalCollectionPageHandlerAuth :: AuthenticatedUser -> Handler Html
-personalCollectionPageHandlerAuth user = do
-  return $ personalCollectionPageToHtml user
+-- Season page handler
+seasonPageHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
+seasonPageHandler user seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  return $ seasonPageToHtml user seasonState
+
+-- Games stub page handler
+gamesPageHandler :: AuthenticatedUser -> Handler Html
+gamesPageHandler user = return $ gamesPageToHtml user
+
+-- Game frame handler - returns HTMX fragment for the landing page game shell
+-- If a game is active, returns the auto-advancing game container.
+-- Otherwise, returns the season summary fragment.
+gameFrameHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
+gameFrameHandler _user seasonRef = do
+  seasonState <- liftIO $ getCurrentSeasonState seasonRef
+  case currentGameState seasonState of
+    Just gs -> return $ activeGameFragment gs
+    Nothing -> return $ gameFrameSeasonFragment seasonState
 
 -- Start new season handler
-startNewSeasonHandler :: SeasonRef -> Handler Html
-startNewSeasonHandler seasonRef = do
-  -- TODO: Remove this boilerplate when Cards are implemented
-  -- Create default teams (reusing logic from WaxBall.State)
-  let homeTeam =
-        [ Player "Home A" 1 0.285 0.350 0.450,
-          Player "Home B" 2 0.312 0.380 0.520,
-          Player "Home C" 3 0.267 0.330 0.425,
-          Player "Home D" 4 0.298 0.375 0.580,
-          Player "Home E" 5 0.245 0.315 0.390,
-          Player "Home F" 6 0.278 0.340 0.465,
-          Player "Home G" 7 0.292 0.360 0.485,
-          Player "Home H" 8 0.255 0.325 0.410,
-          Player "Home I" 9 0.220 0.280 0.340
-        ]
-  let awayTeam =
-        [ Player "Away A" 1 0.275 0.345 0.440,
-          Player "Away B" 2 0.305 0.370 0.510,
-          Player "Away C" 3 0.258 0.320 0.415,
-          Player "Away D" 4 0.289 0.365 0.565,
-          Player "Away E" 5 0.235 0.305 0.380,
-          Player "Away F" 6 0.270 0.335 0.455,
-          Player "Away G" 7 0.284 0.355 0.475,
-          Player "Away H" 8 0.248 0.318 0.400,
-          Player "Away I" 9 0.210 0.270 0.320
-        ]
-
-  let newSeason = newSeasonState homeTeam awayTeam
+startNewSeasonHandler :: Connection -> AuthenticatedUser -> SeasonRef -> Handler Html
+startNewSeasonHandler dbConn user seasonRef = do
+  (homeTeam, awayTeam, homePitcher, awayPitcher) <- liftIO $ loadSeasonTeams dbConn
+  let newSeason = newSeasonState homeTeam awayTeam homePitcher awayPitcher
   liftIO $ writeIORef seasonRef newSeason
-  return $ seasonConfigPageToHtml homeTeam awayTeam
+  return $ seasonConfigPageToHtml user homeTeam awayTeam
 
 -- Season configuration page handler
-seasonConfigPageHandler :: SeasonRef -> Handler Html
-seasonConfigPageHandler seasonRef = do
+seasonConfigPageHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
+seasonConfigPageHandler user seasonRef = do
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ seasonConfigPageToHtml (homeTeam seasonState) (awayTeam seasonState)
+  return $ seasonConfigPageToHtml user (homeTeam seasonState) (awayTeam seasonState)
 
--- Start current season game handler
+-- Start current season game handler — Post-Redirect-Get to /user
+-- The game shell on /user will detect the active game via /game-frame
 startSeasonGameHandler :: SeasonRef -> Handler Html
 startSeasonGameHandler seasonRef = do
-  maybeGameState <- liftIO $ runStartNextGame seasonRef
-  case maybeGameState of
-    Nothing -> do
-      -- Season is complete, redirect to season page
-      seasonState <- liftIO $ getCurrentSeasonState seasonRef
-      return $ seasonPageToHtml seasonState
-    Just gameState -> do
-      -- Start auto-advancing game
-      return $ autoAdvancingGamePageHtml gameState
+  _ <- liftIO $ runStartNextGame seasonRef
+  throwError err303 {errHeaders = [("Location", "/user")]}
 
 -- Auto-advance season game data frame
--- Uses the persistent game state tracking in Season module
 advanceSeasonGameDataFrame :: AuthenticatedUser -> SeasonRef -> Handler Html
 advanceSeasonGameDataFrame user seasonRef = do
-  -- Advance the current game by one step, maintaining all game state including pitch log
   maybeGameState <- liftIO $ runAdvanceCurrentGame seasonRef
   case maybeGameState of
     Nothing -> do
-      -- No current game, show game completion with stats from most recent game
       seasonState <- liftIO $ getCurrentSeasonState seasonRef
       case gameResults seasonState of
-        [] -> do
-          -- No games completed yet, fallback to user page
-          return $ userPageToHtml user seasonState
-        (mostRecent : _) -> do
-          -- Use the most recent completed game state to show completion screen
-          return $ gameCompletionHtml (gameState mostRecent)
-    Just gameState -> do
-      if isGameOver gameState
+        [] -> return $ userPageToHtml user seasonState
+        (mostRecent : _) -> return $ gameCompletionHtml (gameState mostRecent)
+    Just gs -> do
+      if isGameOver gs
         then do
-          -- Game finished, record result and return completion view
-          liftIO $ runRecordGameResult seasonRef gameState
-          return $ gameCompletionHtml gameState
-        else do
-          -- Game still ongoing, return game frame with preserved state
-          return $ autoAdvancingGameFrameHtml gameState
+          liftIO $ runRecordGameResult seasonRef gs
+          return $ gameCompletionHtml gs
+        else return $ autoAdvancingGameFrameHtml gs
 
--- Next season game handler
-nextSeasonGameHandler :: SeasonRef -> Handler Html
-nextSeasonGameHandler seasonRef = do
+-- Next season game handler — returns season config page
+nextSeasonGameHandler :: AuthenticatedUser -> SeasonRef -> Handler Html
+nextSeasonGameHandler user seasonRef = do
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
-  return $ seasonConfigPageToHtml (homeTeam seasonState) (awayTeam seasonState)
+  return $ seasonConfigPageToHtml user (homeTeam seasonState) (awayTeam seasonState)
 
--- Update season player handler
-updateSeasonPlayerHandler :: SeasonRef -> [(String, String)] -> Handler Html
-updateSeasonPlayerHandler seasonRef formData = do
+-- Update season player handler — returns the updated player form fragment
+updateSeasonPlayerHandler :: AuthenticatedUser -> SeasonRef -> [(String, String)] -> Handler Html
+updateSeasonPlayerHandler _user seasonRef formData = do
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
   let updatedSeasonState = updateSeasonPlayerFromForm seasonState formData
   liftIO $ writeIORef seasonRef updatedSeasonState
-  return $ seasonConfigPageToHtml (homeTeam updatedSeasonState) (awayTeam updatedSeasonState)
+  let teamType = fromMaybe "home" $ lookup "team" formData
+      idx = fromMaybe 0 $ lookup "player" formData >>= readMaybe
+      players =
+        if teamType == "home"
+          then homeTeam updatedSeasonState
+          else awayTeam updatedSeasonState
+      updatedPlayer = players !! idx
+  return $ renderSeasonPlayerForm teamType (idx, updatedPlayer)
 
 -- Helper function to update season player from form data
 updateSeasonPlayerFromForm :: SeasonState -> [(String, String)] -> SeasonState

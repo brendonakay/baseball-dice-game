@@ -14,6 +14,7 @@ import Database.SQLite.Simple
 import GHC.Generics
 import Servant.Auth.Server (AuthResult (..), BasicAuthData (..), FromBasicAuthData (..))
 import User.AuthenticatedUser (AuthenticatedUser (..))
+import User.Seed (assignStarterPack)
 import WaxBall.Card (Card (..), Class (..), Special (..), Type (..))
 import WaxBall.Game (Player)
 import qualified WaxBall.Game as Game
@@ -30,9 +31,32 @@ data DbUser = DbUser
 instance FromRow DbUser where
   fromRow = DbUser <$> field <*> field <*> field <*> field
 
--- FromRow instance for Player
+-- FromRow instance for Player (reads name, number, batting_average, obp, slg, era)
 instance FromRow Player where
-  fromRow = Game.Player <$> field <*> field <*> field <*> field <*> field
+  fromRow = Game.Player <$> field <*> field <*> field <*> field <*> field <*> field
+
+-- Load season teams from the seeded player data.
+-- Position players (era IS NULL) are split in insertion order: first 9 = home, next 9 = away.
+-- Pitchers (era IS NOT NULL) are assigned in insertion order: first = home, second = away.
+loadSeasonTeams :: Connection -> IO ([Game.Player], [Game.Player], Game.Player, Game.Player)
+loadSeasonTeams conn = do
+  batters <-
+    query_
+      conn
+      "SELECT name, number, batting_average, on_base_percentage, slugging_percentage, era \
+      \FROM players WHERE era IS NULL ORDER BY id" ::
+      IO [Game.Player]
+  pitchers <-
+    query_
+      conn
+      "SELECT name, number, batting_average, on_base_percentage, slugging_percentage, era \
+      \FROM players WHERE era IS NOT NULL ORDER BY id" ::
+      IO [Game.Player]
+  let homeTeam = take 9 batters
+      awayTeam = take 9 (drop 9 batters)
+      homePitcher = head pitchers
+      awayPitcher = pitchers !! 1
+  return (homeTeam, awayTeam, homePitcher, awayPitcher)
 
 -- Helper function to parse Special from database text
 parseSpecial :: Maybe Text -> Maybe Special
@@ -90,7 +114,8 @@ dbCardToCard dbCard =
             Game.number = dbPlayerNumber dbCard,
             Game.battingAverage = dbPlayerBattingAverage dbCard,
             Game.onBasePercentage = dbPlayerOnBasePercentage dbCard,
-            Game.sluggingPercentage = dbPlayerSluggingPercentage dbCard
+            Game.sluggingPercentage = dbPlayerSluggingPercentage dbCard,
+            Game.era = Nothing
           },
       team = T.unpack $ dbCardTeam dbCard,
       cardType = Type (parseClass $ dbCardClass dbCard) (parseSpecial $ dbCardSpecial dbCard)
@@ -124,7 +149,7 @@ hashPassword password =
 verifyPassword :: Text -> Text -> Bool
 verifyPassword password hashedPassword = hashPassword password == hashedPassword
 
--- Create a new user in the database
+-- Create a new user in the database and assign a starter card pack
 createUser :: Connection -> RegisterData -> IO (Either String Int)
 createUser conn regData = do
   let hashedPwd = hashPassword (regPassword regData)
@@ -134,7 +159,9 @@ createUser conn regData = do
       "INSERT INTO users (username, email, password) VALUES (?, ?, ?)"
       (regUsername regData, regEmail regData, hashedPwd)
   lastId <- lastInsertRowId conn
-  return $ Right $ fromIntegral lastId
+  let userId = fromIntegral lastId
+  assignStarterPack conn userId
+  return $ Right userId
 
 -- Find user by username
 findUserByUsername :: Connection -> Text -> IO (Maybe DbUser)

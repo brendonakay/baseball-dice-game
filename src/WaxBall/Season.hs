@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 -- This module contains Season logic for managing a 10-game season.
 -- Follows the same patterns as WaxBall.Game with StateT monad usage.
@@ -28,7 +29,7 @@ import Control.Monad.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.IORef
 import GHC.Generics (Generic)
-import WaxBall.Game (AwayTeam, GameState (..), HomeTeam, initialGameState, newGameState)
+import WaxBall.Game (AwayTeam, GameState (..), HomeTeam, Player, initialGameState, newGameState)
 import qualified WaxBall.State as GS (advanceGameState)
 
 -- State Transformer for Season logic (following WaxBall.Game pattern)
@@ -63,6 +64,8 @@ data SeasonState = SeasonState
   { currentGameNumber :: Int, -- 1-10, or 11 if season is complete
     homeTeam :: HomeTeam,
     awayTeam :: AwayTeam,
+    homePitcher :: Player, -- Pitcher for the home team
+    awayPitcher :: Player, -- Pitcher for the away team
     gameResults :: [GameResult], -- Completed games (length 0-10)
     homeTeamStats :: TeamStats,
     awayTeamStats :: TeamStats,
@@ -78,12 +81,14 @@ emptyTeamStats :: TeamStats
 emptyTeamStats = TeamStats 0 0 0 0
 
 -- Create a new season state with given teams
-newSeasonState :: HomeTeam -> AwayTeam -> SeasonState
-newSeasonState homeTeam' awayTeam' =
+newSeasonState :: HomeTeam -> AwayTeam -> Player -> Player -> SeasonState
+newSeasonState homeTeam' awayTeam' homePitcher' awayPitcher' =
   SeasonState
     { currentGameNumber = 1,
       homeTeam = homeTeam',
       awayTeam = awayTeam',
+      homePitcher = homePitcher',
+      awayPitcher = awayPitcher',
       gameResults = [],
       homeTeamStats = emptyTeamStats,
       awayTeamStats = emptyTeamStats,
@@ -99,8 +104,11 @@ startNextGame = do
     else case currentGameState seasonState of
       Just ongoing -> return (Just ongoing) -- Return ongoing game
       Nothing -> do
-        -- Initialize new game state with teams from season
-        (_, initializedGameState) <- liftIO $ runStateT (initialGameState (homeTeam seasonState) (awayTeam seasonState)) newGameState
+        -- Initialize new game state with teams and pitchers from season.
+        -- Use pattern matching to unambiguously extract SeasonState fields that
+        -- share names with GameState fields (homePitcher, awayPitcher).
+        let SeasonState {homePitcher = hp, awayPitcher = ap, homeTeam = ht, awayTeam = at} = seasonState
+        (_, initializedGameState) <- liftIO $ runStateT (initialGameState ht at hp ap) newGameState
         -- Store the game state in the season
         put $ seasonState {currentGameState = Just initializedGameState}
         return (Just initializedGameState)

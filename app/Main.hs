@@ -10,6 +10,8 @@ import Network.Wai.Handler.Warp (run)
 import Servant (Context (..))
 import Servant.Auth.Server as SAS
 import User.Auth ()
+import User.Seed (seedDatabase)
+import WaxBall.Game (defaultPitcher)
 import WaxBall.Season (newSeasonState)
 
 main :: IO ()
@@ -18,9 +20,11 @@ main = do
   putStrLn "=== Initializing Baseball Game ==="
   dbConn <- open "app.db"
   putStrLn "Database connected!"
+  seedDatabase dbConn
+  putStrLn "Database seeded!"
 
   -- Initialize empty season state
-  let emptySeasonState = newSeasonState [] [] -- Start with empty teams
+  let emptySeasonState = newSeasonState [] [] defaultPitcher defaultPitcher -- Start with empty teams
   seasonRef <- newIORef emptySeasonState
   putStrLn "Season initialized and ready to start!"
 
