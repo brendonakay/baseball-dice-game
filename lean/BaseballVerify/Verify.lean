@@ -139,24 +139,34 @@ private def parsePlayerList (j : Json) : Except String (List Player) := do
 -- GameState
 -- ---------------------------------------------------------------------------
 
-def serializeGameState (gs : GameState) : Json :=
+-- The JSON fields the Lean model tracks. Factored out so we can serialize a
+-- GameState either on its own or with additional preserved fields appended.
+private def gameStateFields (gs : GameState) : List (String × Json) :=
   let cb : Json := match gs.currentBatter with
     | none   => Json.null
     | some p => serializePlayer p
-  Json.mkObj
-    [ ("inning",        Json.num (JsonNumber.fromNat gs.inning))
-    , ("halfInning",    serializeHalfInning gs.halfInning)
-    , ("homeBatting",   serializePlayerList gs.homeBatting)
-    , ("awayBatting",   serializePlayerList gs.awayBatting)
-    , ("homeScore",     Json.num (JsonNumber.fromNat gs.homeScore))
-    , ("awayScore",     Json.num (JsonNumber.fromNat gs.awayScore))
-    , ("outs",          Json.num (JsonNumber.fromNat gs.outs))
-    , ("balls",         Json.num (JsonNumber.fromNat gs.balls))
-    , ("strikes",       Json.num (JsonNumber.fromNat gs.strikes))
-    , ("bases",         serializeBasesState gs.bases)
-    , ("currentBatter", cb)
-    , ("pitchLog",      Json.arr #[])
-    ]
+  [ ("inning",        Json.num (JsonNumber.fromNat gs.inning))
+  , ("halfInning",    serializeHalfInning gs.halfInning)
+  , ("homeBatting",   serializePlayerList gs.homeBatting)
+  , ("awayBatting",   serializePlayerList gs.awayBatting)
+  , ("homeScore",     Json.num (JsonNumber.fromNat gs.homeScore))
+  , ("awayScore",     Json.num (JsonNumber.fromNat gs.awayScore))
+  , ("outs",          Json.num (JsonNumber.fromNat gs.outs))
+  , ("balls",         Json.num (JsonNumber.fromNat gs.balls))
+  , ("strikes",       Json.num (JsonNumber.fromNat gs.strikes))
+  , ("bases",         serializeBasesState gs.bases)
+  , ("currentBatter", cb)
+  , ("pitchLog",      Json.arr #[])
+  ]
+
+def serializeGameState (gs : GameState) : Json :=
+  Json.mkObj (gameStateFields gs)
+
+-- Serialize a GameState, appending extra raw JSON fields verbatim. Used by the
+-- differential oracle to echo back fields the Lean model does not track (e.g.
+-- homePitcher/awayPitcher) so the round-trip stays a complete GameState.
+def serializeGameStateWith (extra : List (String × Json)) (gs : GameState) : Json :=
+  Json.mkObj (gameStateFields gs ++ extra)
 
 def parseGameState (j : Json) : Except String GameState := do
   let inn ← getNat j "inning"

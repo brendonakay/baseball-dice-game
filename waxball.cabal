@@ -96,6 +96,7 @@ library
                     , http-types
                     , warp
                     , wai
+                    , wai-app-static
                     , sqlite-simple
                     , cryptonite
                     , memory

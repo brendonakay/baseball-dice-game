@@ -115,7 +115,9 @@ Each Game module should live in `src/Game/`
       all views. Maybe just do HTMX Gets in a div for detail views of banner
       items.
 - [ ] Card design. What JavaScript libraries can be used for this?
-- [ ] Break out CSS and JS into their own files.
+- [x] Break out CSS and JS into their own files. CSS in `static/css/app.css`,
+      TypeScript islands in `ts/` built by esbuild to `static/js/app.js`, served
+      from `/static`. HTMX vendored locally.
 
 ### API
 
@@ -137,6 +139,12 @@ Each Game module should live in `src/Game/`
 - [x] Authentication / user base.
 - [x] SQLite for persistence.
 - [ ] Formal verification of core game logic (Lean 4).
+  - [ ] Add Pitcher proofs: model `homePitcher`/`awayPitcher` in the Lean
+        `GameState` and prove the count/out/scoring transitions preserve them
+        (field isolation). The differential oracle currently echoes these fields
+        back verbatim from the input as a stop-gap so the round-trip stays a
+        complete `GameState`; replace that with model-serialized pitchers once
+        proven.
 
 ## User Flow
 

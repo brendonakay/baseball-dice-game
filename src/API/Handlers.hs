@@ -29,7 +29,7 @@ loginPageHandler :: Handler Html
 loginPageHandler = return loginPageHtml
 
 -- Login handler - processes login form
-loginHandler :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
+loginHandler :: Connection -> SAS.CookieSettings -> SAS.JWTSettings -> [(String, String)] -> Handler (Headers '[Header "Set-Cookie" SAS.SetCookie, Header "HX-Redirect" String] Html)
 loginHandler dbConn cookieSettings jwtSettings formData = do
   let getFormValue key = T.pack <$> lookup key formData
       username = getFormValue "username"
@@ -42,11 +42,13 @@ loginHandler dbConn cookieSettings jwtSettings formData = do
         Just user -> do
           maybeSessionCookie <- liftIO $ SAS.makeSessionCookie cookieSettings jwtSettings user
           case maybeSessionCookie of
-            Just sCookie -> do
-              return $ addHeader sCookie loginSuccessRedirectHtml
+            Just sCookie ->
+              -- HTMX reads the HX-Redirect response header and navigates client-side,
+              -- so no inline <script> redirect is needed.
+              return $ addHeader sCookie $ addHeader "/user" loginSuccessRedirectHtml
             Nothing -> throwError err500 {errBody = L8.pack "Failed to create authentication cookie"}
-        Nothing -> return $ noHeader loginFailedHtml
-    _ -> return $ noHeader loginErrorHtml
+        Nothing -> return $ noHeader $ noHeader loginFailedHtml
+    _ -> return $ noHeader $ noHeader loginErrorHtml
 
 -- Register handler - processes registration form
 registerHandler :: Connection -> [(String, String)] -> Handler Html
@@ -150,7 +152,7 @@ nextSeasonGameHandler user seasonRef = do
   return $ seasonConfigPageToHtml user (homeTeam seasonState) (awayTeam seasonState)
 
 -- Update season player handler — returns the updated player form fragment
-updateSeasonPlayerHandler :: AuthenticatedUser -> SeasonRef -> [(String, String)] -> Handler Html
+updateSeasonPlayerHandler :: AuthenticatedUser -> SeasonRef -> [(String, String)] -> Handler (Headers '[Header "HX-Trigger" String] Html)
 updateSeasonPlayerHandler _user seasonRef formData = do
   seasonState <- liftIO $ getCurrentSeasonState seasonRef
   let updatedSeasonState = updateSeasonPlayerFromForm seasonState formData
@@ -162,7 +164,11 @@ updateSeasonPlayerHandler _user seasonRef formData = do
           then homeTeam updatedSeasonState
           else awayTeam updatedSeasonState
       updatedPlayer = players !! idx
-  return $ renderSeasonPlayerForm teamType (idx, updatedPlayer)
+  -- HX-Trigger fires a client-side `toast` event; the TypeScript toast island
+  -- renders the notification. Server decides when, client decides how.
+  return $
+    addHeader "{\"toast\":{\"message\":\"Player updated\"}}" $
+      renderSeasonPlayerForm teamType (idx, updatedPlayer)
 
 -- Helper function to update season player from form data
 updateSeasonPlayerFromForm :: SeasonState -> [(String, String)] -> SeasonState

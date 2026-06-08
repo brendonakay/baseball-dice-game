@@ -6,5 +6,10 @@ dist-*
 # App related
 app.db
 
+# Front-end build
+node_modules/
+static/js/app.js
+static/js/app.js.map
+
 # Lake (Lean 4 build system)
 lean/.lake/

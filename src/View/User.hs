@@ -32,7 +32,7 @@ userPageToHtml user _seasonState =
             H.toHtml (" " :: String)
             H.a
               ! A.href (stringValue "/personal-collection")
-              ! A.style (stringValue "color: #8b1a1a; font-family: 'Arial Black', sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;")
+              ! A.class_ (stringValue "info-link")
               $ H.toHtml "[View]"
 
       -- Game frame — loads via HTMX on page load
@@ -43,5 +43,5 @@ userPageToHtml user _seasonState =
         ! Htmx.hxSwap (stringValue "innerHTML")
         ! A.class_ (stringValue "game-shell panel")
         $ H.p
-          ! A.style (stringValue "text-align: center; color: #8b1a1a; font-family: 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; padding: 40px 0;")
+          ! A.class_ (stringValue "game-shell-loading")
         $ H.toHtml "Loading..."

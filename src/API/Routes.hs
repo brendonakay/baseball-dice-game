@@ -40,11 +40,13 @@ type PublicAPI =
     -- Authentication
     :<|> "login"
       :> ReqBody '[FormUrlEncoded] [(String, String)]
-      :> Post '[HTML] (Headers '[Header "Set-Cookie" SAS.SetCookie] Html)
+      :> Post '[HTML] (Headers '[Header "Set-Cookie" SAS.SetCookie, Header "HX-Redirect" String] Html)
     :<|> "register"
       :> ReqBody '[FormUrlEncoded] [(String, String)]
       :> Post '[HTML] Html
     :<|> "logout" :> Post '[HTML] Html
+    -- Static assets (CSS, vendored HTMX, compiled JS bundle)
+    :<|> "static" :> Raw
 
 -- Protected API (authentication required)
 type ProtectedAPI =
@@ -74,7 +76,7 @@ type ProtectedAPI =
            -- /update-player (updates a single player in season)
            :<|> "update-player"
              :> ReqBody '[FormUrlEncoded] [(String, String)]
-             :> Post '[HTML] Html
+             :> Post '[HTML] (Headers '[Header "HX-Trigger" String] Html)
        )
 
 -- Combined API
@@ -90,6 +92,7 @@ publicServer dbConn cookieSettings jwtSettings =
     :<|> loginHandler dbConn cookieSettings jwtSettings
     :<|> registerHandler dbConn
     :<|> logoutHandler
+    :<|> serveDirectoryWebApp "static"
 
 -- Protected server handlers
 protectedServer ::
@@ -107,7 +110,7 @@ protectedServer ::
         :<|> "start-game" :> Post '[HTML] Html
         :<|> "game-data" :> Get '[HTML] Html
         :<|> "next-game" :> Post '[HTML] Html
-        :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] Html
+        :<|> "update-player" :> ReqBody '[FormUrlEncoded] [(String, String)] :> Post '[HTML] (Headers '[Header "HX-Trigger" String] Html)
     )
 protectedServer dbConn seasonRef (Authenticated user) =
   userPageHandler user seasonRef

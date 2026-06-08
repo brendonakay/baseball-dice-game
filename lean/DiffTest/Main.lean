@@ -70,13 +70,26 @@ partial def processLinesStr (f : Json → Except String String) : IO UInt32 := d
 -- Transition wrappers
 -- ---------------------------------------------------------------------------
 
+-- Fields the Lean model does not track but that are part of the full Haskell
+-- GameState. We echo them back verbatim from the input so the differential
+-- round-trip remains a complete GameState (the transitions under test never
+-- modify these). See: README TODO to model pitchers in Lean and prove they are
+-- preserved, rather than echoing them here.
+def preservedKeys : List String := ["homePitcher", "awayPitcher"]
+
+def preservedFields (j : Json) : List (String × Json) :=
+  preservedKeys.filterMap fun k =>
+    match j.getObjVal? k with
+    | .ok v    => some (k, v)
+    | .error _ => none
+
 def applyTransition (fn : GameState → GameState) (j : Json) : Except String Json := do
   let gs ← parseGameState j
-  .ok (serializeGameState (fn gs))
+  .ok (serializeGameStateWith (preservedFields j) (fn gs))
 
 def applyAddRun (hi : HalfInning) (j : Json) : Except String Json := do
   let gs ← parseGameState j
-  .ok (serializeGameState (addRun hi gs))
+  .ok (serializeGameStateWith (preservedFields j) (addRun hi gs))
 
 def applyIsGameOver (j : Json) : Except String String := do
   let gs ← parseGameState j

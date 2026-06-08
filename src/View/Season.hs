@@ -20,16 +20,16 @@ seasonConfigPageToHtml user homeTeamPlayers awayTeamPlayers =
   mainLayout user "Season Config" $
     H.div $ do
       H.h1 ! A.class_ (stringValue "page-title") $ H.toHtml "Team Configuration"
-      H.div ! A.style (stringValue "display: flex; gap: 32px; flex-wrap: wrap;") $ do
-        H.div ! A.style (stringValue "flex: 1; min-width: 300px;") $ do
+      H.div ! A.class_ (stringValue "config-columns") $ do
+        H.div ! A.class_ (stringValue "config-column") $ do
           H.div ! A.class_ (stringValue "panel") $ do
             H.div ! A.class_ (stringValue "panel-title") $ H.toHtml "Home Team"
             mapM_ (renderSeasonPlayerForm "home") (zip [0 ..] homeTeamPlayers)
-        H.div ! A.style (stringValue "flex: 1; min-width: 300px;") $ do
+        H.div ! A.class_ (stringValue "config-column") $ do
           H.div ! A.class_ (stringValue "panel") $ do
             H.div ! A.class_ (stringValue "panel-title") $ H.toHtml "Away Team"
             mapM_ (renderSeasonPlayerForm "away") (zip [0 ..] awayTeamPlayers)
-      H.div ! A.style (stringValue "text-align: center; margin-top: 32px;") $ do
+      H.div ! A.class_ (stringValue "config-actions") $ do
         H.form ! A.action (stringValue "/start-game") ! A.method (stringValue "post") $
           H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "btn-danger") $
             H.toHtml "Start Game"
@@ -46,7 +46,7 @@ seasonContentHtml seasonState = do
     then do
       H.div ! A.class_ (stringValue "panel") $ do
         H.div ! A.class_ (stringValue "panel-title") $ H.toHtml "Ready to Play?"
-        H.p ! A.style (stringValue "margin-bottom: 16px; color: #8b1a1a;") $
+        H.p ! A.class_ (stringValue "panel-note-red") $
           H.toHtml "Start a new 10-game season to begin."
         H.form ! A.action (stringValue "/start-season") ! A.method (stringValue "post") $
           H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "btn-primary") $
@@ -98,7 +98,7 @@ seasonContentHtml seasonState = do
       -- Next game action
       if currentGameNumber seasonState <= 10
         then
-          H.div ! A.style (stringValue "margin-top: 16px;") $
+          H.div ! A.class_ (stringValue "season-next") $
             H.form ! A.action (stringValue "/next-game") ! A.method (stringValue "post") $
               H.button ! A.type_ (stringValue "submit") ! A.class_ (stringValue "btn-primary") $
                 H.toHtml $
@@ -111,7 +111,7 @@ seasonContentHtml seasonState = do
                 | homeWins > awayWins = "Home"
                 | awayWins > homeWins = "Away"
                 | otherwise = "Tie"
-          H.p ! A.style (stringValue "margin-bottom: 16px;") $
+          H.p ! A.class_ (stringValue "panel-note") $
             H.toHtml $
               "Champion: " ++ champion ++ " Team"
           H.form ! A.action (stringValue "/start-season") ! A.method (stringValue "post") $
@@ -176,7 +176,7 @@ renderGameResult result =
     H.span ! A.class_ (stringValue "winner") $
       H.toHtml $
         "Game " ++ show (gameNumber result) ++ " — " ++ show (winningTeam result) ++ " wins"
-    H.span ! A.style (stringValue "margin-left: 16px; color: #1a2744; font-size: 0.85rem;") $
+    H.span ! A.class_ (stringValue "game-result-score") $
       H.toHtml $
         show (awayTeamScore result) ++ "–" ++ show (homeTeamScore result)
 

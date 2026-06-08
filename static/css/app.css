@@ -1,0 +1,207 @@
+/* WaxBall stylesheet
+ * Extracted from the former View.Layout.globalCSS string blob.
+ * Palette is hoisted into CSS custom properties so the repeated colors
+ * live in exactly one place.
+ */
+
+:root {
+  /* Three-color scheme drawn from the card art: grass GREEN (the brand /
+   * accent), warm CHARCOAL (text + structure), and CREAM card stock.
+   * The card's bright blue and red are deliberately left to the card
+   * artwork itself, not the UI chrome. The legacy --gold (accent) and
+   * --red (destructive) roles are kept as variables but repointed:
+   * --gold -> green, --red -> charcoal. Give --red a red hex again to
+   * bring warning color back later. */
+  --navy: #2c2f2b;        /* warm charcoal: text, borders, dark surfaces */
+  --gold: #3f7d3c;        /* accent role, now deep grass green (was blue) */
+  --cream: #ece9dc;       /* card stock cream */
+  --sand: #e6e8da;        /* page background: pale sage card-stock tint */
+  --red: #2c2f2b;         /* destructive/accent role, muted to charcoal */
+  --red-dark: #20221e;
+  --green: #5aa356;       /* grass green (brand fills/buttons) */
+  --green-dark: #3f7d3c;
+  --green-panel: #7cba78; /* lighter grass green of the card panel */
+  --panel-tint: #dde9d9;  /* pale green-tinted surface */
+  --rule: #d6d1be;
+  --font-serif: Georgia, serif;
+  --font-block: "Arial Black", Impact, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--sand); font-family: var(--font-serif); color: var(--navy); min-height: 100vh; }
+a { color: var(--navy); text-decoration: none; }
+
+/* Nav */
+.nav-bar { background: var(--green); border-bottom: 4px solid var(--gold); position: sticky; top: 0; z-index: 100; }
+.nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.nav-logo { font-family: var(--font-block); color: var(--cream); letter-spacing: 3px; text-transform: uppercase; font-size: 1.4rem; }
+.nav-links { display: flex; gap: 24px; }
+.nav-link { font-family: var(--font-block); color: var(--cream); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; text-decoration: none; padding-bottom: 2px; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.nav-link:hover { border-bottom: 3px solid var(--cream); color: var(--cream); }
+.nav-user { display: flex; align-items: center; gap: 12px; }
+.nav-username { font-family: var(--font-block); color: var(--cream); font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; }
+.nav-logout-btn { background: transparent; border: 2px solid var(--cream); color: var(--cream); font-family: var(--font-block); font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.nav-logout-btn:hover { background: var(--cream); color: var(--green-dark); }
+.inline-form { display: inline; }
+
+/* Layout */
+.page-content { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+/* Page headings */
+.page-title { font-family: var(--font-block); color: var(--navy); text-transform: uppercase; letter-spacing: 3px; border-bottom: 4px solid var(--gold); padding-bottom: 12px; margin-bottom: 24px; font-size: 1.6rem; }
+
+/* Panel cards */
+.panel { background: var(--cream); border: 2px solid var(--navy); padding: 20px; margin-bottom: 20px; box-shadow: 3px 3px 0 var(--gold); }
+.panel-title { font-family: var(--font-block); color: var(--navy); text-transform: uppercase; letter-spacing: 2px; font-size: 1rem; border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 16px; }
+.panel-note { margin-bottom: 16px; }
+.panel-note-red { margin-bottom: 16px; color: var(--red); }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.info-item { padding: 10px 12px; background: var(--panel-tint); border-left: 3px solid var(--gold); font-size: 0.9rem; }
+.info-item strong { color: var(--red); font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+.info-link { color: var(--red); font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Buttons */
+.btn-primary { background: var(--green); color: var(--cream); border: 2px solid var(--green-dark); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; padding: 10px 20px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.btn-primary:hover { background: var(--green-dark); }
+.btn-danger { background: var(--red); color: var(--cream); border: 2px solid var(--red); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; padding: 10px 20px; cursor: pointer; transition: background 0.15s; }
+.btn-danger:hover { background: var(--red-dark); }
+.btn-success { background: var(--green); color: var(--cream); border: 2px solid var(--green); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; padding: 10px 20px; cursor: pointer; }
+.btn-success:hover { background: var(--green-dark); }
+
+/* Tables */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { background: var(--navy); color: var(--cream); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 1px; font-size: 0.7rem; padding: 10px; text-align: left; }
+.data-table td { padding: 10px; border-bottom: 1px solid var(--gold); font-size: 0.9rem; }
+.data-table tr:nth-child(even) td { background: var(--panel-tint); }
+
+/* Season / Game results */
+.game-result-row { padding: 12px; margin: 8px 0; background: var(--cream); border-left: 4px solid var(--navy); }
+.game-result-row .winner { color: var(--green); font-family: var(--font-block); }
+.game-result-score { margin-left: 16px; color: var(--navy); font-size: 0.85rem; }
+
+/* Progress bar */
+.progress-bar { width: 100%; height: 12px; background: #d4c5a0; border: 1px solid var(--gold); }
+.progress-fill { height: 100%; background: var(--navy); transition: width 0.3s ease; }
+
+/* Config form */
+.config-form-row { margin: 8px 0; display: flex; align-items: center; gap: 10px; }
+.config-form-row label { min-width: 140px; font-family: var(--font-block); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--red); }
+.config-form-row input { padding: 5px 8px; border: 1px solid var(--navy); background: var(--cream); font-family: var(--font-serif); flex: 1; }
+.update-btn { background: var(--green); color: var(--cream); border: 1px solid var(--green); font-family: var(--font-block); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; cursor: pointer; margin-top: 8px; }
+.update-btn:hover { background: var(--green-dark); }
+
+/* Player form card */
+.player-form { background: var(--cream); border: 1px solid var(--gold); padding: 14px; margin: 12px 0; border-left: 4px solid var(--navy); }
+.player-form h3 { font-family: var(--font-block); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--navy); margin-bottom: 10px; }
+
+/* Season config layout */
+.config-columns { display: flex; gap: 32px; flex-wrap: wrap; }
+.config-column { flex: 1; min-width: 300px; }
+.config-actions { text-align: center; margin-top: 32px; }
+.season-next { margin-top: 16px; }
+
+/* Game frame */
+.game-shell { min-height: 300px; }
+.game-shell-loading { text-align: center; color: var(--red); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; padding: 40px 0; }
+.game-frame { font-family: var(--font-serif); }
+.game-flex { display: flex; gap: 20px; flex-wrap: wrap; }
+.game-main { flex: 2; min-width: 280px; }
+.game-side { flex: 1; min-width: 260px; }
+.game-status { text-align: center; padding: 8px; margin-bottom: 8px; }
+.game-status-advancing { color: var(--red); font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; }
+.game-status-complete { font-size: 0.9rem; color: var(--green); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; }
+.scoreboard { display: flex; justify-content: space-between; background: var(--navy); color: var(--cream); padding: 15px 20px; margin-bottom: 16px; border-bottom: 4px solid var(--gold); }
+.score-section h3 { margin: 0 0 4px 0; font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--cream); }
+.score-section .score { font-size: 2.2em; font-weight: bold; font-family: var(--font-block); }
+.game-info { text-align: center; margin-bottom: 16px; font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; color: var(--navy); }
+.diamond-container { position: relative; width: 280px; height: 280px; margin: 0 auto; }
+.diamond { width: 180px; height: 180px; background: #8B4513; transform: rotate(45deg); position: absolute; top: 50px; left: 50px; border-radius: 10px; }
+.base { position: absolute; width: 20px; height: 20px; background: var(--cream); border: 2px solid var(--navy); }
+.base.occupied { background: var(--gold); }
+.first-base { top: 130px; right: 40px; }
+.second-base { top: 40px; right: 130px; }
+.third-base { top: 130px; left: 40px; }
+.home-plate { bottom: 40px; left: 130px; border-radius: 50%; }
+.batter-info { text-align: center; margin: 16px 0; padding: 12px; background: var(--panel-tint); border: 1px solid var(--gold); font-size: 0.9rem; }
+.count { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+.count-item { text-align: center; }
+.count-item .number { font-size: 2em; font-weight: bold; color: var(--navy); font-family: var(--font-block); }
+.count-item .label { font-size: 0.75rem; color: var(--red); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 1px; }
+.game-log { background: var(--cream); border: 1px solid var(--navy); padding: 16px; }
+.game-log-title { font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--navy); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 10px; }
+.game-log-empty { font-family: var(--font-block); font-size: 0.65rem; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.log-entries { max-height: 500px; overflow-y: auto; }
+.log-entry { padding: 8px; border-bottom: 1px solid var(--rule); font-size: 0.8rem; }
+.log-entry-head { display: flex; justify-content: space-between; align-items: center; }
+.log-entry-batter { font-family: var(--font-block); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--navy); }
+.log-entry-inning { margin-left: 8px; font-weight: normal; color: var(--red); font-family: var(--font-serif); font-size: 0.7rem; text-transform: none; letter-spacing: 0; }
+.log-entry-score { margin-top: 3px; font-size: 0.7rem; color: var(--red); }
+.log-neutral { color: var(--navy); }
+.log-bad { color: var(--red); }
+.log-good { color: var(--green); }
+.log-great { color: var(--gold); }
+
+/* Game completion screen */
+.completion-panel { text-align: center; padding: 40px; }
+.completion-title { font-family: var(--font-block); color: var(--green); font-size: 2rem; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 20px; }
+.completion-winner { font-family: var(--font-block); font-size: 1.4rem; color: var(--navy); text-transform: uppercase; letter-spacing: 2px; margin: 16px 0; }
+.completion-score { font-size: 1.2rem; color: var(--red); margin: 16px 0; }
+.completion-innings { font-size: 0.9rem; color: var(--navy); margin: 16px 0; }
+.completion-note { font-size: 0.75rem; color: var(--red); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; margin-top: 24px; }
+
+/* Personal collection stat summary */
+.pc-stats-summary { display: flex; gap: 16px; margin-bottom: 24px; }
+.pc-stat-panel { flex: 1; text-align: center; padding: 16px; }
+.pc-stat-panel-label { font-family: var(--font-block); font-size: 0.65rem; color: var(--red); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.pc-stat-panel-value { font-size: 2rem; font-weight: bold; color: var(--navy); font-family: var(--font-block); }
+.pc-stat-panel-value-sm { font-size: 1.4rem; font-weight: bold; color: var(--navy); font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; }
+.pc-empty-hint { font-size: 0.75rem; color: var(--red); margin-top: 8px; letter-spacing: 1px; }
+
+/* 1960s Baseball Card styles */
+.pc-cards-grid { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; padding: 20px 0; }
+.pc-card-flip { width: 200px; aspect-ratio: 5/7; perspective: 1000px; box-shadow: 3px 3px 0 var(--green), 6px 6px 0 var(--navy); transition: transform 0.15s ease; cursor: pointer; }
+.pc-card-flip:hover { transform: translateY(-5px) rotate(-0.5deg); }
+.pc-card-flipper { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+.pc-card-flip:hover .pc-card-flipper { transform: rotateY(180deg); }
+.pc-card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border: 3px solid var(--navy); background: var(--cream); overflow: hidden; display: flex; flex-direction: column; }
+.pc-card-back { transform: rotateY(180deg); }
+.pc-card-header { background: var(--navy); padding: 8px 10px; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
+.pc-set-name { color: var(--cream); font-family: var(--font-block); font-size: 0.5rem; letter-spacing: 2px; text-transform: uppercase; }
+.pc-jersey { color: var(--cream); font-family: var(--font-block); font-size: 2rem; line-height: 1; }
+.pc-photo-area { background: linear-gradient(135deg, var(--green), var(--green-dark)); height: 55px; display: flex; align-items: center; justify-content: center; color: var(--sand); font-family: var(--font-block); font-size: 0.6rem; letter-spacing: 2px; flex-shrink: 0; }
+.pc-card-body { padding: 8px 10px; background: var(--cream); flex: 1; }
+.pc-player-name { font-family: var(--font-block); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--navy); border-bottom: 2px solid var(--gold); padding-bottom: 4px; margin-bottom: 6px; }
+.pc-team { font-size: 0.6rem; color: var(--red); font-family: var(--font-block); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.pc-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-top: 6px; }
+.pc-stat { text-align: center; background: var(--panel-tint); border: 1px solid var(--gold); padding: 3px 2px; }
+.pc-stat-label { display: block; font-size: 0.45rem; color: var(--red); font-family: var(--font-block); text-transform: uppercase; }
+.pc-stat-value { display: block; font-size: 0.8rem; font-weight: bold; color: var(--navy); font-family: "Courier New", monospace; }
+.pc-type-badge { position: absolute; bottom: 8px; right: 8px; background: var(--gold); color: var(--cream); font-family: var(--font-block); font-size: 0.4rem; padding: 2px 4px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* Card front face: the printed baseball-card artwork. The image already
+ * carries its own cream border + aspect ratio (5:7), so it just fills the
+ * face. Names/numbers will be overlaid here in a later pass. */
+.pc-card-front { padding: 0; background: var(--cream); }
+.pc-card-front-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-state p { font-family: var(--font-block); color: var(--red); letter-spacing: 2px; text-transform: uppercase; font-size: 1rem; }
+
+/* Auth (login / register) — formerly inline-styled in View.Auth */
+.auth-page { background: var(--sand); font-family: var(--font-serif); margin: 0; padding: 0; min-height: 100vh; }
+.auth-card { max-width: 420px; margin: 60px auto; padding: 28px; background: var(--cream); border: 2px solid var(--navy); box-shadow: 4px 4px 0 var(--gold); }
+.auth-title { text-align: center; font-family: var(--font-block); color: var(--navy); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 28px; }
+.auth-heading { font-family: var(--font-block); text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; padding-bottom: 8px; margin-top: 8px; border-bottom: 2px solid var(--gold); }
+.auth-heading-register { margin-top: 28px; }
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; margin-bottom: 5px; font-family: var(--font-block); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--red); }
+.form-input { width: 100%; padding: 8px; border: 1px solid var(--navy); background: var(--cream); font-family: var(--font-serif); }
+.auth-card .btn-primary, .auth-card .btn-success { width: 100%; margin-top: 4px; }
+
+/* Toast notifications — rendered by the TypeScript toast island */
+.toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+.toast { background: var(--navy); color: var(--cream); border: 2px solid var(--green); box-shadow: 3px 3px 0 var(--green-dark); padding: 12px 18px; font-family: var(--font-block); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0; transform: translateY(10px); transition: opacity 0.2s ease, transform 0.2s ease; }
+.toast.toast-visible { opacity: 1; transform: translateY(0); }

@@ -76,9 +76,6 @@ snap gs =
       sStrikes = strikes gs
     }
 
-snapFromLean :: GameState -> Snap
-snapFromLean = snap
-
 -- ---------------------------------------------------------------------------
 -- Subprocess I/O
 -- ---------------------------------------------------------------------------
@@ -105,20 +102,24 @@ callLean binPath cmd states = do
 
 -- | For a given Game action and Lean command, run both on each state and
 --   report the first divergence (if any).
+-- The Lean oracle now echoes back the fields it does not model (pitchers, etc.),
+-- so its output decodes into a *complete* GameState and we compare the whole
+-- state — not just the count snapshot. A parse failure or any field mismatch is
+-- a divergence.
 runDiffTest :: FilePath -> String -> Game () -> [GameState] -> IO ()
 runDiffTest binPath cmd action states = do
   hsResults <- mapM (`execGame` action) states
   leanMaybes <- callLean binPath cmd states
   let triples = zip3 states hsResults leanMaybes
       divergences =
-        [ (gs, snap hs, fmap snapFromLean ml)
+        [ (gs, hs, ml)
           | (gs, hs, ml) <- triples,
             case ml of
               Nothing -> True -- parse failure counts as divergence
-              Just lr -> snap hs /= snap lr
+              Just lr -> hs /= lr
         ]
   when (not (null divergences)) $ do
-    let (gs, hsSnap, leanSnap) = head divergences
+    let (gs, hs, ml) = head divergences
     expectationFailure $
       "Divergence for command '"
         ++ cmd
@@ -127,10 +128,10 @@ runDiffTest binPath cmd action states = do
         ++ show (snap gs)
         ++ "\n"
         ++ "  Haskell:     "
-        ++ show hsSnap
+        ++ show (snap hs)
         ++ "\n"
         ++ "  Lean:        "
-        ++ show leanSnap
+        ++ maybe "<parse failure>" (show . snap) ml
 
 -- ---------------------------------------------------------------------------
 -- Random state generation (no Arbitrary instances — avoids conflicts)
